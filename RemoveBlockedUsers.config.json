@@ -1,0 +1,30 @@
+{
+	"all": {
+		"general": {
+			"hideBlocked": false
+		},
+		"notifications": {
+			"messages": true,
+			"voiceChat": true
+		},
+		"places": {
+			"messages": true,
+			"spamMessages": true,
+			"ignoredMessages": true,
+			"pins": true,
+			"inbox": true,
+			"replies": true,
+			"repliesToBlocked": true,
+			"mentions": true,
+			"reactions": true,
+			"threads": true,
+			"autocompletes": true,
+			"memberList": true,
+			"voiceList": true,
+			"voiceChat": true,
+			"activity": true,
+			"channelList": true,
+			"recentDms": true
+		}
+	}
+}

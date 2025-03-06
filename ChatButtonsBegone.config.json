@@ -1,0 +1,43 @@
+{
+    "settings": {
+        "emojiButton": true,
+        "stickerButton": true,
+        "gifButton": false,
+        "giftButton": true,
+        "attachButton": false,
+        "appLauncherButton": true,
+        "messageActions": {
+            "quickReactions": true,
+            "reactionButton": false,
+            "superReactionButton": true,
+            "editButton": true,
+            "replyButton": true,
+            "forwardButton": true
+        },
+        "dms": {
+            "friendsTab": false,
+            "premiumTab": true,
+            "snowsgivingTab": true,
+            "discordBirthdayTab": true,
+            "discordShopTab": true
+        },
+        "channels": {
+            "boostBar": true,
+            "inviteButton": true
+        },
+        "voice": {
+            "cameraPanelButton": true,
+            "screensharePanelButton": true,
+            "activityPanelButton": true,
+            "soundboardPanelButton": true,
+            "krispButton": true
+        },
+        "toolbar": {
+            "inboxButton": true,
+            "helpButton": true
+        },
+        "compatibility": {
+            "invisibleTypingButton": false
+        }
+    }
+}

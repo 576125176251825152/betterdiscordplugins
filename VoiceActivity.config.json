@@ -1,0 +1,15 @@
+{
+    "settings": {
+        "showProfileSection": true,
+        "showMemberListIcons": true,
+        "showDMListIcons": true,
+        "showPeopleListIcons": true,
+        "showGuildIcons": true,
+        "currentChannelColor": true,
+        "showStatusIcons": true,
+        "ignoreEnabled": false,
+        "ignoredChannels": [],
+        "ignoredGuilds": []
+    },
+    "changelogVersion": "1.9.3"
+}
