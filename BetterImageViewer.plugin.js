@@ -1,6 +1,6 @@
 /**
  * @name BetterImageViewer
- * @version 1.5
+ * @version 1.6
  * @description Better image viewer
  * @author Tony
  * @source https://github.com/Legend-Master/discord-better-image-viewer
@@ -49,10 +49,6 @@ class SimleImageViewer {
 	 */
 	imageWrapper
 	/**
-	 * @type {HTMLAnchorElement}
-	 */
-	link
-	/**
 	 * @type {HTMLDivElement}
 	 */
 	backdrop
@@ -60,13 +56,11 @@ class SimleImageViewer {
 	/**
 	 * @param {HTMLImageElement} image
 	 * @param {HTMLDivElement} imageWrapper
-	 * @param {HTMLAnchorElement} link
 	 * @param {HTMLDivElement} backdrop
 	 */
-	constructor(image, imageWrapper, link, backdrop) {
+	constructor(image, imageWrapper, backdrop) {
 		this.image = image
 		this.imageWrapper = imageWrapper
-		this.link = link
 		this.backdrop = backdrop
 
 		this.updateInitalImage()
@@ -149,9 +143,12 @@ class SimleImageViewer {
 			this.image.addEventListener('load', this.updateInitalImage)
 		}
 
-		// Prevent infinite loading
-		if (this.image.src !== this.link.href) {
-			this.image.src = this.link.href
+		const url = new URL(this.image.src)
+		url.searchParams.delete('width')
+		url.searchParams.delete('height')
+		const urlString = url.toString()
+		if (urlString !== this.image.src) {
+			this.image.src = urlString
 		}
 
 		this.image.style.position = 'unset'
@@ -201,8 +198,11 @@ class SimleImageViewer {
 		document.addEventListener('mousemove', this.onMouseMove)
 		document.addEventListener(
 			'mouseup',
-			() => document.removeEventListener('mousemove', this.onMouseMove),
-			{ once: true }
+			(ev) => {
+				ev.stopImmediatePropagation()
+				document.removeEventListener('mousemove', this.onMouseMove)
+			},
+			{ once: true, capture: true }
 		)
 		ev.preventDefault()
 	}
@@ -407,10 +407,6 @@ function attachImageViewer(wrapper) {
 	if (!wrapper.parentElement) {
 		return
 	}
-	const link = wrapper.parentElement.querySelector('a')
-	if (!link) {
-		return
-	}
 
 	// imageWrapper.style.width = ''
 	// imageWrapper.style.height = ''
@@ -425,12 +421,8 @@ function attachImageViewer(wrapper) {
 	loadingOverlay.style.display = 'grid'
 	loadingOverlay.style.placeItems = 'center'
 
-	// link.style.left = '2em'
-	// link.style.bottom = '2em'
-	// link.style.top = 'unset'
-
 	exitImageView()
-	imageViewer = new SimleImageViewer(image, wrapper, link, backdrop)
+	imageViewer = new SimleImageViewer(image, wrapper, backdrop)
 	imageWrapper = wrapper
 
 	return true

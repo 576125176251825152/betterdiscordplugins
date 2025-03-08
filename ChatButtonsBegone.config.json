@@ -27,7 +27,7 @@
         },
         "voice": {
             "cameraPanelButton": true,
-            "screensharePanelButton": true,
+            "screensharePanelButton": false,
             "activityPanelButton": true,
             "soundboardPanelButton": true,
             "krispButton": true

@@ -1,12 +1,12 @@
 {
 	"all": {
 		"changeLogs": {
-			"BDFDB": "4.0.0",
-			"BetterFriendList": "1.5.7",
+			"BDFDB": "4.0.2",
+			"BetterFriendList": "1.5.8",
 			"BetterSearchPage": "1.2.5",
 			"FriendNotifications": "2.0.5",
 			"GameActivityToggle": "1.3.3",
-			"ImageUtilities": "5.5.5",
+			"ImageUtilities": "5.5.7",
 			"OpenSteamLinksInApp": "1.1.7",
 			"PluginRepo": "9.9.9",
 			"ReadAllNotificationsButton": "1.8.0",
@@ -15,7 +15,7 @@
 			"ServerDetails": "1.2.5",
 			"ServerFolders": "7.3.2",
 			"SplitLargeMessages": "1.8.7",
-			"SpotifyControls": "1.4.4",
+			"SpotifyControls": "1.4.6",
 			"Translator": "2.6.6"
 		},
 		"choices": {
@@ -29,8 +29,8 @@
 			"useChromium": false
 		},
 		"hashes": {
-			"0BDFDB.data.json": "8777aeb2d4a7ab68632b5e738fab73f8d77074bd",
-			"0BDFDB.raw.css": "1803f451c26300a6f5f9a6601b329c184ac37b70"
+			"0BDFDB.data.json": "83752a64f04bf1f748417736784b0ae46359dcc4",
+			"0BDFDB.raw.css": "bfeeeadfc6730e2e183c261289ae68b03eb11db6"
 		}
 	}
 }
