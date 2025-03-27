@@ -1,7 +1,7 @@
 /**
  * @name YABDP4Nitro
  * @author Riolubruh
- * @version 5.7.1
+ * @version 5.7.3
  * @invite EFmGEWAUns
  * @source https://github.com/riolubruh/YABDP4Nitro
  * @donate https://github.com/riolubruh/YABDP4Nitro?tab=readme-ov-file#donate
@@ -99,6 +99,15 @@ const AppIcon = Webpack.getByStrings("getCurrentDesktopIcon", "isEditorOpen", "i
 const RegularAppIcon = Webpack.getByStrings("M19.73 4.87a18.2", {searchExports:true});
 const CurrentDesktopIcon = Webpack.getByKeys("getCurrentDesktopIcon");
 const CustomAppIcon = Webpack.getByStrings(".iconSource,width:");
+const ClipsEnabledMod = Webpack.getMangled('useExperiment({location:"useEnableClips"', {
+    useEnableClips: Webpack.Filters.byStrings('useExperiment({location:"useEnableClips"'),
+    areClipsEnabled: Webpack.Filters.byStrings('areClipsEnabled'),
+    isPremium: Webpack.Filters.byStrings('isPremiumAtLeast')
+});
+const ClipsAllowedMod = Webpack.getMangled(`let{ignorePlatformRestriction:`, {
+    isClipsClientCapable: (x)=>x==x //just get the first result lol
+});
+const ClipsMod = Webpack.getByKeys(`isViewerClippingAllowedForUser`);
 //#endregion
 
 const defaultSettings = {
@@ -163,17 +172,16 @@ const config = {
             "discord_id": "359063827091816448",
             "github_username": "riolubruh"
         }],
-        "version": "5.7.1",
+        "version": "5.7.3",
         "description": "Unlock all screensharing modes, and use cross-server & GIF emotes!",
         "github": "https://github.com/riolubruh/YABDP4Nitro",
         "github_raw": "https://raw.githubusercontent.com/riolubruh/YABDP4Nitro/main/YABDP4Nitro.plugin.js"
     },
     changelog: [
         {
-            title: "5.7.1",
+            title: "5.7.3",
             items: [
-                "Rewrite of In-App Icons. It will no longer enable Premium Type (nor require it to be enabled), and should be much more reliable.",
-                "Fixed error appearing in console when switching from a gradient theme to a default theme."
+                "Made it so that Clips are now (mostly) unlocked through patches rather than experiment overrides, which should make the Clips Bypass much more reliable."
             ]
         }
     ],
@@ -682,7 +690,7 @@ module.exports = class YABDP4Nitro {
                trigger saveAndUpdate or restart the plugin to
                make ffmpeg load if it wasn't loaded properly the first time. */
             if(ffmpeg == undefined) await this.loadFFmpeg();
-
+			
             //for each file being added
             for(let i = 0; i < args.files.length; i++){
                 const currentFile = args.files[i];
@@ -816,6 +824,30 @@ module.exports = class YABDP4Nitro {
             }
             originalFunction(args);
         });
+
+        Patcher.after(this.meta.name, ClipsEnabledMod, "useEnableClips", (_, args, ret) => {
+            //I have no earthly idea why but, instead patching this one causes React crashes./
+            // Luckily after-patching prevents it from crashing and it still unlocks it as it should
+            return true;
+        });
+        Patcher.instead(this.meta.name, ClipsEnabledMod, "areClipsEnabled", () => {
+            return true;
+        });
+        Patcher.instead(this.meta.name, ClipsEnabledMod, "isPremium", () => {
+            return true;
+        });
+        Patcher.instead(this.meta.name, ClipsAllowedMod, "isClipsClientCapable", () => {
+            return true;
+        });
+        Patcher.instead(this.meta.name, ClipsMod, "isViewerClippingAllowedForUser", () => {
+            return true;
+        });
+        Patcher.instead(this.meta.name, ClipsMod, "isClipsEnabledForUser", () => {
+            return true;
+        });
+        Patcher.instead(this.meta.name, ClipsMod, "isVoiceRecordingAllowedForUser", () => {
+            return true;
+        });
     } //End of clipsBypass()
     // #endregion
 
@@ -871,19 +903,12 @@ module.exports = class YABDP4Nitro {
     // #region Experiments
     async experiments(){
         try {
-            //wait for modules to be loaded
-            await Webpack.waitForModule(Webpack.Filters.byStoreName("DeveloperExperimentStore"));
-            await Webpack.waitForModule(Webpack.Filters.byStoreName("ExperimentStore"));
-            //code slightly modified from https://gist.github.com/JohannesMP/afdf27383608c3b6f20a6a072d0be93c?permalink_comment_id=4784940#gistcomment-4784940
-            let wpRequire;
-            webpackChunkdiscord_app.push([[Math.random()], {}, (req) => { wpRequire = req; }]); 
-            let u = Webpack.getByKeys("ASSISTANT_WUMPUS_VOICE_USER", "default").default;
-            let m = Object.values(u._dispatcher._actionHandlers._dependencyGraph.nodes);
-
+            //code heavily modified from https://gist.github.com/JohannesMP/afdf27383608c3b6f20a6a072d0be93c?permalink_comment_id=4784940#gistcomment-4784940
             CurrentUser.flags |= 1;
-            m.find((x) => x.name === "DeveloperExperimentStore").actionHandler["CONNECTION_OPEN"]();
-            try { m.find((x) => x.name === "ExperimentStore").actionHandler["OVERLAY_INITIALIZE"]({ user: { flags: 1 } }); } catch {}
-            m.find((x) => x.name === "ExperimentStore").storeDidChange();
+            const Stores = Object.values(UserStore._dispatcher._actionHandlers._dependencyGraph.nodes);
+            Stores.find((x) => x.name === "DeveloperExperimentStore").actionHandler["CONNECTION_OPEN"]();
+            try { Stores.find((x) => x.name === "ExperimentStore").actionHandler["OVERLAY_INITIALIZE"]({ user: { flags: 1 } }); } catch {}
+            Stores.find((x) => x.name === "ExperimentStore").storeDidChange(); 
         } catch(err){
             Logger.warn(this.meta.name, err);
         }
@@ -1504,6 +1529,18 @@ module.exports = class YABDP4Nitro {
             if(ret == undefined) return;
             let avatarDecorations = settings.avatarDecorations;
 
+            //user has an avatar decoration
+            if(ret.avatarDecorationData){
+                //error check
+                if(avatarDecorations){
+                    //dont process fake avatar decorations
+                    if(ret.avatarDecorationData.sku_id != "0"){
+                        //cache avatar decoration
+                        avatarDecorations[ret.avatarDecorationData.skuId] = ret.avatarDecorationData.asset;
+                    }
+                }
+            }
+
             function getRevealedText(self){
                 let revealedTextLocal = ""; //init empty string with local scope
                 let userProfile = userProfileMod.getUserProfile(args[0]); //get the user's profile from the cached user profiles
@@ -1562,7 +1599,7 @@ module.exports = class YABDP4Nitro {
                 //set avatar decoration data to fake avatar decoration
                 ret.avatarDecorationData = {
                     asset: avatarDecorations[assetId],
-                    sku_id: "1144003461608906824" //dummy sku id
+                    sku_id: "0" //dummy sku id
                 };
 
                 //add user to the list of users to show with the YABDP4Nitro user badge if we haven't already.
@@ -2812,10 +2849,8 @@ module.exports = class YABDP4Nitro {
                     id: currentDesktopIcon,
                     width: 48
                 });
-            }
-            
+            } 
         });
-
     }
     //#endregion
 
@@ -2949,6 +2984,7 @@ module.exports = class YABDP4Nitro {
         DOM.removeStyle("YABDP4NitroBadges");
         usrBgUsers = [];
         BdApi.unlinkJS("ffmpeg.js");
+        Data.save("YABDP4Nitro", "settings", settings);
         Logger.info(this.meta.name, "(v" + this.meta.version + ") has stopped.");
     }
     // #endregion
