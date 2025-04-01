@@ -9,8 +9,6 @@
 		},
 		"places": {
 			"messages": true,
-			"spamMessages": true,
-			"ignoredMessages": true,
 			"pins": true,
 			"inbox": true,
 			"replies": true,
@@ -25,6 +23,11 @@
 			"activity": true,
 			"channelList": true,
 			"recentDms": true
+		},
+		"types": {
+			"blocked": true,
+			"ignored": true,
+			"spammers": true
 		}
 	}
 }
