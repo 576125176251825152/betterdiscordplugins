@@ -1,7 +1,7 @@
 /**
  * @name YABDP4Nitro
  * @author Riolubruh
- * @version 5.7.4
+ * @version 5.8.0
  * @invite EFmGEWAUns
  * @source https://github.com/riolubruh/YABDP4Nitro
  * @donate https://github.com/riolubruh/YABDP4Nitro?tab=readme-ov-file#donate
@@ -33,7 +33,7 @@
 @else@*/
 
 //#region Module Hell
-const { Webpack, Patcher, Net, React, UI, Logger, Data, Components, DOM } = BdApi;
+const { Webpack, Patcher, Net, React, UI, Logger, Data, Components, DOM, Plugins } = BdApi;
 const StreamButtons = Webpack.getMangled("RESOLUTION_1080", {
     ApplicationStreamFPS: Webpack.Filters.byKeys("FPS_30"),
     ApplicationStreamFPSButtons: o => Array.isArray(o) && typeof o[0]?.label === 'number' && o[0]?.value === 15,
@@ -153,7 +153,9 @@ const defaultSettings = {
     "forceClip": false,
     "checkForUpdates": true,
     "fakeInlineVencordEmotes": true,
-    "soundmojiEnabled": true
+    "soundmojiEnabled": true,
+    "useAudioClipBypass": true,
+    "forceAudioClip": false
 };
 
 //Plugin-wide variables
@@ -172,21 +174,24 @@ const config = {
             "discord_id": "359063827091816448",
             "github_username": "riolubruh"
         }],
-        "version": "5.7.4",
+        "version": "5.8.0",
         "description": "Unlock all screensharing modes, and use cross-server & GIF emotes!",
         "github": "https://github.com/riolubruh/YABDP4Nitro",
         "github_raw": "https://raw.githubusercontent.com/riolubruh/YABDP4Nitro/main/YABDP4Nitro.plugin.js"
     },
     changelog: [
         {
-            title: "5.7.4",
+            title: "5.8.0",
             items: [
-                "Made it so you can properly switch to and from the new Dark and Onyx themes from the Desktop Visual Refresh when Nitro Client Themes is enabled. I would've pushed this fix earlier, but I thought I already did for some reason.",
-                "Updated descriptions of the Clips and Soundmoji bypasses to mention that Experiments will be enabled if they are enabled.",
-                "Made it so FFmpeg.js is now loaded from GitHub instead of unpkg due to unpkg adding a CORS policy which was causing it to fail to load for some users. This also has the benefit of being (potentially) faster and more reliable than unpkg, so it's a win-win.",
-                "Made it so the Clips Bypass puts the name of the file without the extension as the title of the clip.",
-                "Removed the \"Transmuxing video...\" toast when using Clips since the transmux is so short that the message is basically pointless other than to confirm whether or not the bypass is loaded and enabled.",
-                "Added toast message if there is an error at some point when processing a non-MP4 file for the Clips Bypass."
+                "Added Audio Clips Bypass! Send audio files up to (nearly) 100MB for free! Nitro users should disable this. WAV, AIFF, and WMA will mux as .MOV files, the rest as MP4.",
+                "Added Audio Clips Bypass and Force Audio Clip settings.",
+                "Improved console output for errors relating to clips.",
+                "Added some older types of video files to skip for the Clips Bypass that would cause an error.",
+                "Set all error toasts to force show since they're error messages and ought to be seen even if you have BD toasts disabled.",
+                "Added more error checking for clips.",
+                "Made FLV, OGV, WMV, and MOV video files mux to MOV, which should improve compatibility with those video types.",
+                "Set cache policy to force-cache when fetching FFmpeg.js to make it load just a little faster.",
+                "Made the Clips Bypass ignore .MOD files which Chromium thinks are video files for some reason.",
             ]
         }
     ],
@@ -293,7 +298,9 @@ const config = {
             settings: [
                 { type: "switch", id: "useClipBypass", name: "Use Clips Bypass", note: "Enabling this will effectively set your file upload limit for video files to 100MB. Disable this if you have a file upload limit larger than 100MB. Enabling this option will also enable Experiments.", value: () => settings.useClipBypass },
                 { type: "switch", id: "alwaysTransmuxClips", name: "Force Transmuxing", note: "Always transmux the video, even if transmuxing would normally be skipped. Transmuxing is only ever skipped if the codec does not include AVC1 or includes MP42.", value: () => settings.alwaysTransmuxClips },
-                { type: "switch", id: "forceClip", name: "Force Clip", note: "Always send video files as a clip, even if the size is below 10MB.", value: () => settings.forceClip }
+                { type: "switch", id: "forceClip", name: "Force Clip", note: "Always send video files as a clip, even if the size is below 10MB. I recommend that you leave this option disabled.", value: () => settings.forceClip },
+                { type: "switch", id: "useAudioClipBypass", name: "Audio Clips Bypass", note: "Identical to the Clips Bypass for videos, except it works with audio files.", value: () => settings.useAudioClipBypass },
+                { type: "switch", id: "forceAudioClip", name: "Force Audio Clip", note: "Always send audio files as a clip, even if the size is below 10MB. I recommend that you leave this option disabled.", value: () => settings.forceAudioClip },
             ]
         },
         {
@@ -541,7 +548,7 @@ module.exports = class YABDP4Nitro {
         });
 
         //Clips Bypass
-        if(settings.useClipBypass){
+        if(settings.useClipBypass || settings.useAudioClipBypass){
             try {
                 this.experiments();
                 this.overrideExperiment("2023-09_clips_nitro_early_access", 2);
@@ -664,7 +671,7 @@ module.exports = class YABDP4Nitro {
         });
     }
 
-    // #region Clips Bypass
+    // #region Clips Bypasses
     async clipsBypass(){
         if(!this.MP4Box){
             try{
@@ -674,19 +681,42 @@ module.exports = class YABDP4Nitro {
         }
         if(ffmpeg == undefined) await this.loadFFmpeg();
 
-        async function ffmpegTransmux(arrayBuffer, fileName = "input.mp4"){
+        async function ffmpegTransmux(arrayBuffer, inFileName = "input.mp4", ffmpegArguments, outFileName = "output.mp4"){
             if(ffmpeg){
-                //UI.showToast("Transmuxing video...", { type: "info" });
-                ffmpeg.on("log", ({ message }) => {
-                    console.log(message);
-                });
-                await ffmpeg.writeFile(fileName, new Uint8Array(arrayBuffer));
-                await ffmpeg.exec(["-i", fileName, "-codec", "copy", "-brand", "isom/avc1", "-movflags", "+faststart", "-map", "0", "-map_metadata", "-1", "-map_chapters", "-1", "output.mp4"]);
-                const data = await ffmpeg.readFile('output.mp4');
+                if(!ffmpegArguments)
+                    ffmpegArguments = ["-i",inFileName,"-codec","copy","-brand","isom/avc1","-movflags","+faststart",
+                                       "-map","0","-map_metadata","-1","-map_chapters","-1",outFileName];
+                
+                await ffmpeg.writeFile(inFileName, new Uint8Array(arrayBuffer));
+                console.log("Approximately equivalent ffmpeg command:");
+                console.log("ffmpeg " + ffmpegArguments.join(" "));
+                await ffmpeg.exec(ffmpegArguments);
+                const data = await ffmpeg.readFile(outFileName);
+                
+                ffmpeg.deleteFile(inFileName);
+                ffmpeg.deleteFile(outFileName);
+                
+                if(data.length == 0){
+                    throw new Error(`An error occurred during muxing/encoding: Output file ended up empty or doesn't exist,
+                                    likely due to an FFmpeg error. Please check the FFmpeg logs above. If you need assistance,
+                                    please use the support channel in the Discord server.`);
+                }
 
                 return data.buffer;
             }
         }
+        async function ffmpegAudioTransmux(arrayBuffer, inFileName = "input.mp3", outFileName = "output.mp4"){
+
+            let ffmpegArgs = ["-f","lavfi","-i","color=c=black:s=500x2","-i",inFileName,"-shortest","-fflags","+shortest", 
+                "-brand","isom/avc1","-movflags","+faststart","-map_metadata","-1","-map_chapters","-1",
+                "-preset","ultrafast","-c:a","copy","-strict","-2", outFileName];
+
+            return await ffmpegTransmux(arrayBuffer, inFileName, ffmpegArgs, outFileName);
+        }
+
+        const skippedAudioTypes = ['audio/mid','audio/basic','audio/mpegurl','audio/3gp'];
+        const skippedVideoTypes = ['video/3gp',"video/asf",'video/ivf'];
+
         Patcher.instead(this.meta.name, addFilesMod, "addFiles", async (_, [args], originalFunction) => {
             /* If ffmpeg isn't loaded, or was unloaded for some reason,
                when the user adds a file, make sure to load it again if it's undefined
@@ -694,6 +724,16 @@ module.exports = class YABDP4Nitro {
                trigger saveAndUpdate or restart the plugin to
                make ffmpeg load if it wasn't loaded properly the first time. */
             if(ffmpeg == undefined) await this.loadFFmpeg();
+
+            function errorHandler(err, currentFile, name) {
+                UI.showToast("Something went wrong. See console for details.", { type: "error", forceShow: true });
+                Logger.error(name, err);
+                if(currentFile) {
+                    Logger.info(name, "Current file information for debugging:");
+                    Logger.info(name, currentFile);
+                    Logger.info(name, `File Type: "${currentFile.file?.type}"`);
+                }
+            }
 			
             //for each file being added
             for(let i = 0; i < args.files.length; i++){
@@ -701,23 +741,23 @@ module.exports = class YABDP4Nitro {
 
                 if(currentFile.file.name.endsWith(".dlfc")) return;
 
-                //larger than 10mb
-                if(currentFile.file.size > 10485759 || settings.forceClip){
-					const clipData = {
-                        "id": "",
-                        "version": 3,
-                        "applicationName": "",
-                        "applicationId": "1301689862256066560",
-                        "users": [
-							CurrentUser.id
-						],
-                        "clipMethod": "manual",
-                        "length": currentFile.file.size,
-                        "thumbnail": "",
-                        "filepath": "",
-                        "name": currentFile.file.name.substring(0, currentFile.file.name.lastIndexOf('.'))
-                    };
-					
+                const clipData = {
+                    "id": "",
+                    "version": 3,
+                    "applicationName": "",
+                    "applicationId": "1301689862256066560",
+                    "users": [
+                        CurrentUser.id
+                    ],
+                    "clipMethod": "manual",
+                    "length": currentFile.file.size,
+                    "thumbnail": "",
+                    "filepath": "",
+                    "name": currentFile.file.name.substring(0, currentFile.file.name.lastIndexOf('.'))
+                };
+
+                //larger than 10mb or force video clip enabled AND video clip bypass enabled
+                if((currentFile.file.size > 10485759 || settings.forceClip) && settings.useClipBypass){
 					//if this file is an mp4 file
                     if(currentFile.file.type == "video/mp4"){
                         let dontStopMeNow = true;
@@ -731,7 +771,7 @@ module.exports = class YABDP4Nitro {
 
                             try {
                                 //check if file is H264 or H265
-                                if(info.videoTracks[0].codec.startsWith("avc") || info.videoTracks[0].codec.startsWith("hev1")){
+                                if(info.videoTracks[0]?.codec?.startsWith("avc") || info.videoTracks[0]?.codec?.startsWith("hev1")){
 
                                     let hasTransmuxed = false;
                                     if(!info.brands.includes("avc1") || info.brands.includes("mp42") || settings.alwaysTransmuxClips){
@@ -773,8 +813,7 @@ module.exports = class YABDP4Nitro {
                                 //send as a "clip"
                                 currentFile.clip = clipData;
                             } catch(err){
-                                UI.showToast("Something went wrong. See console for details.", { type: "error" });
-                                Logger.error(this.meta.name, err);
+                                errorHandler(err, currentFile, this.meta.name);
                             } finally {
                                 dontStopMeNow = false;
                             }
@@ -793,17 +832,31 @@ module.exports = class YABDP4Nitro {
                         while (dontStopMeNow){
                             await new Promise(r => setTimeout(r, 10));
                         }
-                    }else if(currentFile.file.type.startsWith("video/")){
+                    
+                    }
+                    else if(currentFile.file.name.toLowerCase().endsWith(".mod") && currentFile.file.type == 'video/mpeg'){
+                        continue;
+                    }
+                    else if(currentFile.file.type.startsWith("video/") && !skippedVideoTypes.includes(currentFile.file.type)){
                         //Is a video file, but not MP4
 
+                        let outFileName = "output.mp4";
+
                         //AVI file warning
-                        if(currentFile.file.type == "video/x-msvideo"){
-                            UI.showToast("[YABDP4Nitro] NOTE: AVI Files will send, but HTML5 does not support playing AVI video codecs!", { type: "warning" });
+                        if(currentFile.file.type == "video/avi"){
+                            UI.showToast("[YABDP4Nitro] NOTE: AVI Files may send, but HTML5 and MP4 do not support all AVI video codecs, it may not play and FFmpeg may error!", { type: "warning" });
                         }
                         try {
                             let arrayBuffer = await currentFile.file.arrayBuffer();
+                            const movTypes = ["video/flv", "video/ogg", "video/wmv", "video/mov"];
+                            if(movTypes.includes(currentFile.file.type)){
+                                Logger.info(this.meta.name, 'Using MOV format for clip.');
+                                
+                                outFileName = "output.mov";
+                            }
 
-                            let array1 = ArrayBuffer.concat(await ffmpegTransmux(arrayBuffer, currentFile.file.name), udtaBuffer);
+                            let array1 = ArrayBuffer.concat(await ffmpegTransmux(arrayBuffer, currentFile.file.name, undefined, outFileName), udtaBuffer);
+
                             let video = new File([new Uint8Array(array1)], currentFile.file.name.substr(0, currentFile.file.name.lastIndexOf(".")) + ".mp4", { type: "video/mp4" });
 
                             currentFile.file = video;
@@ -811,12 +864,42 @@ module.exports = class YABDP4Nitro {
                             //send as a "clip"
                             currentFile.clip = clipData;
                         } catch(err){
-                            UI.showToast("Something went wrong. See console for details.", { type: "error" });
-                            Logger.error(this.meta.name, err);
+                            errorHandler(err, currentFile, this.meta.name);
+                            continue;
                         }
                     }
-                    currentFile.platform = 1;
                 }
+                //Audio file above 10mb or Force Audio Clip and it not an incompatible type and useAudioClipBypass is true
+                if(settings.useAudioClipBypass && (currentFile.file.size > 10485759 || settings.forceAudioClip) &&
+                   (currentFile.file.type.startsWith("audio/") && !skippedAudioTypes.includes(currentFile.file.type))){
+
+                    try {
+                        let arrayBuffer = await currentFile.file.arrayBuffer();
+
+                        let outFileName = "output.mp4";
+
+                        if(['audio/wav', 'audio/aiff', 'audio/x-ms-wma'].includes(currentFile.file.type)){
+                            Logger.info("YABDP4Nitro", 'Using MOV format for audio clip.');
+                            outFileName = 'output.mov';
+                        }
+                        if(currentFile.file.type == 'audio/vnd.dolby.dd-raw'){
+                            UI.showToast("AC3 should send but playback is not supported!", {type: "warn"});
+                        }
+
+                        let array1 = ArrayBuffer.concat(await ffmpegAudioTransmux(arrayBuffer, currentFile.file.name, outFileName), udtaBuffer);
+
+                        let video = new File([new Uint8Array(array1)], clipData.name + ".mp4", { type: "video/mp4" });
+
+                        currentFile.file = video;
+
+                        //send as a "clip"
+                        currentFile.clip = clipData;
+                    } catch(err){
+                        errorHandler(err, currentFile, this.meta.name);
+                        continue;
+                    }
+                }
+                currentFile.platform = 1;
             }
             originalFunction(args);
         });
@@ -851,10 +934,15 @@ module.exports = class YABDP4Nitro {
     async loadFFmpeg(){
         const defineTemp = window.global.define;
 
+        let ffmpegScript = document.getElementById("ffmpegScript");
+        if(ffmpegScript){
+            ffmpegScript.remove();
+        }
+
         try {
             const ffmpeg_js_baseurl = "https://raw.githubusercontent.com/riolubruh/YABDP4Nitro/refs/heads/main/ffmpeg/";
             //load ffmpeg worker
-            const ffmpegWorkerURL = URL.createObjectURL(await (await fetch(ffmpeg_js_baseurl + "814.ffmpeg.js", { timeout: 100000 })).blob());
+            const ffmpegWorkerURL = URL.createObjectURL(await (await fetch(ffmpeg_js_baseurl + "814.ffmpeg.js", { timeout: 100000, cache: "force-cache" })).blob());
 
             //load FFmpeg.WASM
             let ffmpegSrc = await (await fetch(ffmpeg_js_baseurl + "ffmpeg.js")).text();
@@ -868,24 +956,34 @@ module.exports = class YABDP4Nitro {
             // since for a brief moment it is undefined, any function that uses it may throw an error during that window.
             window.global.define = undefined;
 
-            //deprecated function, but uhhhh fuck you we need it
-            await BdApi.linkJS("ffmpeg.js", ffmpegURL);
+            //load external JS as a script
+            await new Promise((load, err) => {
+                const ffmpegScriptElem = document.getElementById("ffmpegScript") || document.createElement("script");
+                ffmpegScriptElem.id = "ffmpegScript";
+                ffmpegScriptElem.src = ffmpegURL;
+                ffmpegScriptElem.onload = load;
+                ffmpegScriptElem.onerror = err;
+                document.head.appendChild(ffmpegScriptElem);
+            });
 
             window.global.define = defineTemp;
 
             ffmpeg = new FFmpegWASM.FFmpeg();
 
-            const ffmpegCoreURL = URL.createObjectURL(await (await fetch(ffmpeg_js_baseurl + "ffmpeg-core.js", { timeout: 100000 })).blob());
+            const ffmpegCoreURL = URL.createObjectURL(await (await fetch(ffmpeg_js_baseurl + "ffmpeg-core.js", { timeout: 100000, cache: "force-cache" })).blob());
 
-            const ffmpegCoreWasmURL = URL.createObjectURL(await (await fetch(ffmpeg_js_baseurl + "ffmpeg-core.wasm", { timeout: 100000 })).blob());
+            const ffmpegCoreWasmURL = URL.createObjectURL(await (await fetch(ffmpeg_js_baseurl + "ffmpeg-core.wasm", { timeout: 100000, cache: "force-cache" })).blob());
 
             await ffmpeg.load({
                 coreURL: ffmpegCoreURL,
                 wasmURL: ffmpegCoreWasmURL
             });
             Logger.info(this.meta.name, "FFmpeg load success!");
+            ffmpeg.on("log", ({ message }) => {
+                console.log(message);
+            });
         } catch(err){
-            UI.showToast("An error occured trying to load FFmpeg.wasm. Check console for details.", { type: "error" });
+            UI.showToast("An error occured trying to load FFmpeg.wasm. Check console for details.", { type: "error", forceShow: true });
             Logger.info(this.meta.name, "FFmpeg failed to load. The clips bypass will not work without this unless the file is already the correct format! Error details below.");
             Logger.error(this.meta.name, err);
         } finally {
@@ -926,31 +1024,30 @@ module.exports = class YABDP4Nitro {
 
         //Patching saveClientTheme function.
         Patcher.instead(this.meta.name, themesModule, "saveClientTheme", (_, [args]) => {
+
+            //if user is trying to set the theme to a default theme
             if(args.backgroundGradientPresetId == undefined){
 
                 //If this number is -1, that indicates to the plugin that the current theme we're setting to is not a gradient nitro theme.
                 settings.lastGradientSettingStore = -1;
-                //save any changes to settings
-                //Utilities.saveSettings(this.meta.name, this.settings);
-                Data.save(this.meta.name, "settings", this.settings);
 
-                //if user is trying to set the theme to the default dark theme
-                if(args.theme == 'dark' || args.theme == 'light' || args.theme == 'darker' || args.theme == 'midnight'){
-                    //dispatch settings update to change to dark theme
-                    Dispatcher.dispatch({
-                        type: "SELECTIVELY_SYNCED_USER_SETTINGS_UPDATE",
-                        changes: {
-                            appearance: {
-                                shouldSync: false, //prevent sync to stop discord api from butting in. Since this is not a nitro theme, shouldn't this be set to true? Idk, but I'm not touching it lol.
-                                settings: {
-                                    theme: args.theme, //default dark theme
-                                    developerMode: true //genuinely have no idea what this does.
-                                }
+                //save any changes to settings
+                Data.save(this.meta.name, "settings", this.settings);
+                
+                //dispatch settings update to change themes
+                Dispatcher.dispatch({
+                    type: "SELECTIVELY_SYNCED_USER_SETTINGS_UPDATE",
+                    changes: {
+                        appearance: {
+                            shouldSync: false, //prevent sync to stop discord api from butting in. Since this is not a nitro theme, shouldn't this be set to true? Idk, but I'm not touching it lol.
+                            settings: {
+                                theme: args.theme,
+                                developerMode: true //genuinely have no idea what this does.
                             }
                         }
-                    });
-                    return;
-                }
+                    }
+                });
+                
                 return;
             }else{ //gradient themes
                 //Store the last gradient setting used in settings
@@ -1169,12 +1266,12 @@ module.exports = class YABDP4Nitro {
                                         .split("?")[0]; //remove any URL parameters since we don't want or need them
                                 } catch(err){
                                     Logger.error(this.meta.name, err);
-                                    BdApi.UI.showToast("An error occurred. Are there multiple images in this album/gallery?", { type: "error" });
+                                    BdApi.UI.showToast("An error occurred. Are there multiple images in this album/gallery?", { type: "error", forceShow: true });
                                     return;
                                 }
                             }
                             if(stringToEncode == ""){
-                                BdApi.UI.showToast("An error occurred: couldn't find file name.", { type: "error" });
+                                BdApi.UI.showToast("An error occurred: couldn't find file name.", { type: "error", forceShow: true });
                                 Logger.error(this.meta.name, "Couldn't find file name for some reason. Contact Riolubruh!");
                             }
 
@@ -1182,8 +1279,6 @@ module.exports = class YABDP4Nitro {
                             stringToEncode = "P{" + stringToEncode.replace("imgur.com/", "") + "}";
                             //finally encode the string, adding a space before it so nothing fucks up
                             encodedStr = " " + secondsightifyEncodeOnly(stringToEncode);
-                            //let the user know what has happened
-                            BdApi.UI.showToast("3y3 copied to clipboard!", { type: "info" });
 
                             //If this is not an Imgur URL, yell at the user.
                         }else if(stringToEncode.toLowerCase().startsWith("imgur.com") == false){
@@ -1194,15 +1289,14 @@ module.exports = class YABDP4Nitro {
                         //if somehow none of the previous code ran, this is the last protection against an error. If this runs, something has probably gone horribly wrong.
                         if(encodedStr == "") return;
 
-                        //Do this stupid shit that Chrome forces you to do to copy text to the clipboard.
-                        const clipboardTextElem = document.createElement("textarea"); //create a textarea
-                        clipboardTextElem.style.position = 'fixed'; //this is so that the rest of the document doesn't try to format itself to fit a textarea in it
-                        clipboardTextElem.value = encodedStr; //add the encoded string to the textarea
-                        document.body.appendChild(clipboardTextElem); //add the textarea to the document
-                        clipboardTextElem.select(); //focus the textarea?
-                        clipboardTextElem.setSelectionRange(0, 99999); //select all of the text in the textarea
-                        document.execCommand('copy'); //finally send the copy command
-                        document.body.removeChild(clipboardTextElem); //get rid of the evidence	
+                        //copy to clipboard
+                        try{
+                            DiscordNative.clipboard.copy(encodedStr);
+                            UI.showToast("3y3 copied to clipboard!", { type: "info" });    
+                        }catch(err){
+                            UI.showToast("Failed to copy to clipboard!", { type: "error", forceShow: true });   
+                            Logger.error(this.meta.name, err);
+                        }
                     } //end copy pfp 3y3 click event
                 }) //end of react createElement
             ); //end of element push
@@ -1396,18 +1490,16 @@ module.exports = class YABDP4Nitro {
                 let previewURL = this.profileEffects[i].config.thumbnailPreviewSrc;
                 let title = this.profileEffects[i].config.title;
                 //encode 3y3
-                let encodedText = secondsightifyEncodeOnly("/fx" + i); //fx0, fx1, etc.
+                let encodedStr = secondsightifyEncodeOnly("/fx" + i); //fx0, fx1, etc.
                 //javascript that runs onclick for each profile effect button
                 let copyDecoration3y3 = function(){
-                    const clipboardTextElem = document.createElement("textarea");
-                    clipboardTextElem.style.position = "fixed";
-                    clipboardTextElem.value = ` ${encodedText}`;
-                    document.body.appendChild(clipboardTextElem);
-                    clipboardTextElem.select();
-                    clipboardTextElem.setSelectionRange(0, 99999);
-                    document.execCommand("copy");
-                    BdApi.UI.showToast("3y3 copied to clipboard!", { type: "info" });
-                    document.body.removeChild(clipboardTextElem);
+                    try{
+                        DiscordNative.clipboard.copy(" " + encodedStr);
+                        UI.showToast("3y3 copied to clipboard!", { type: "info" });    
+                    }catch(err){
+                        UI.showToast("Failed to copy to clipboard!", { type: "error", forceShow: true });   
+                        Logger.error(this.meta.name, err);
+                    }
                 };
 
                 profileEffectChildren.push(
@@ -1635,20 +1727,9 @@ module.exports = class YABDP4Nitro {
             //for each avatar decoration
             for(let i = 0; i < listOfDecorationIds.length; i++){
 
-                //text to encode to 3y3
-                let encodedText = this.secondsightifyEncodeOnly("/a" + listOfDecorationIds[i]); // /a[id]
+                //encode to 3y3 and store clipboard copy in onclick event
+                let encodedStr = this.secondsightifyEncodeOnly("/a" + listOfDecorationIds[i]); // /a[id]
                 //javascript that runs onclick for each avatar decoration button
-                let copyDecoration3y3 = function(){
-                    const clipboardTextElem = document.createElement("textarea");
-                    clipboardTextElem.style.position = "fixed";
-                    clipboardTextElem.value = ` ${encodedText}`;
-                    document.body.appendChild(clipboardTextElem);
-                    clipboardTextElem.select();
-                    clipboardTextElem.setSelectionRange(0, 99999);
-                    document.execCommand("copy");
-                    BdApi.UI.showToast("3y3 copied to clipboard!", { type: "info" });
-                    document.body.removeChild(clipboardTextElem);
-                };
                 let child = React.createElement("img", {
                     style: {
                         width: "23%",
@@ -1658,7 +1739,15 @@ module.exports = class YABDP4Nitro {
                         borderRadius: "4px",
                         backgroundColor: "var(--background-tertiary)"
                     },
-                    onClick: copyDecoration3y3,
+                    onClick: () => {
+                        try{
+                            DiscordNative.clipboard.copy(" " + encodedStr);
+                            UI.showToast("3y3 copied to clipboard!", { type: "info" });    
+                        }catch(err){
+                            UI.showToast("Failed to copy to clipboard!", { type: "error", forceShow: true });   
+                            Logger.error("YABDP4Nitro", err);
+                        }
+                    },
                     src: "https://cdn.discordapp.com/avatar-decoration-presets/" + settings.avatarDecorations[listOfDecorationIds[i]] + ".png?size=64"
                 });
                 avatarDecorationChildren.push(child);
@@ -2567,16 +2656,13 @@ module.exports = class YABDP4Nitro {
 
                         let encodedStr = ((padding || "") + " " + encoded);
 
-                        //do this stupid shit Chrome makes you do to copy text to the clipboard.
-                        const clipboardTextElem = document.createElement("textarea");
-                        clipboardTextElem.style.position = 'fixed';
-                        clipboardTextElem.value = encodedStr;
-                        document.body.appendChild(clipboardTextElem);
-                        clipboardTextElem.select();
-                        clipboardTextElem.setSelectionRange(0, 99999);
-                        document.execCommand('copy');
-                        UI.showToast("3y3 copied to clipboard!", { type: "info" });
-                        document.body.removeChild(clipboardTextElem);
+                        try{
+                            DiscordNative.clipboard.copy(encodedStr);
+                            UI.showToast("3y3 copied to clipboard!", { type: "info" });    
+                        }catch(err){
+                            UI.showToast("Failed to copy to clipboard!", { type: "error", forceShow: true });   
+                            Logger.error("YABDP4Nitro", err);
+                        }
                     }
                 })
             );
@@ -2763,20 +2849,18 @@ module.exports = class YABDP4Nitro {
                                         .split("?")[0]; //remove any URL parameters since we don't want or need them
                                 } catch(err){
                                     Logger.error(this.meta.name, err);
-                                    BdApi.UI.showToast("An error occurred. Are there multiple images in this album/gallery?", { type: "error" });
+                                    BdApi.UI.showToast("An error occurred. Are there multiple images in this album/gallery?", { type: "error", forceShow: true });
                                     return;
                                 }
                             }
                             if(stringToEncode == ""){
-                                BdApi.UI.showToast("An error occurred: couldn't find file name.", { type: "error" });
+                                BdApi.UI.showToast("An error occurred: couldn't find file name.", { type: "error", forceShow: true });
                                 Logger.error(this.meta.name, "Couldn't find file name for some reason. Contact Riolubruh.");
                             }
                             //add starting "B{" , remove "imgur.com/" , and add ending "}"
                             stringToEncode = "B{" + stringToEncode.replace("imgur.com/", "") + "}";
                             //finally encode the string, adding a space before it so nothing fucks up
                             encodedStr = " " + secondsightifyEncodeOnly(stringToEncode);
-                            //let the user know what has happened
-                            UI.showToast("3y3 copied to clipboard!", { type: "info" });
 
                             //If this is not an Imgur URL, yell at the user.
                         }else if(stringToEncode.toLowerCase().startsWith("imgur.com") == false){
@@ -2787,16 +2871,15 @@ module.exports = class YABDP4Nitro {
                         //if somehow none of the previous code ran, this is the last protection against an error. If this runs, something has probably gone horribly wrong.
                         if(encodedStr == "") return;
 
-                        //Do this stupid shit that Chrome forces you to do to copy text to the clipboard.
-                        const clipboardTextElem = document.createElement("textarea"); //create a textarea
-                        clipboardTextElem.style.position = 'fixed'; //this is so that the rest of the document doesn't try to format itself to fit a textarea in it
-                        clipboardTextElem.value = encodedStr; //add the encoded string to the textarea
-                        document.body.appendChild(clipboardTextElem); //add the textarea to the document
-                        clipboardTextElem.select(); //focus the textarea?
-                        clipboardTextElem.setSelectionRange(0, 99999); //select all of the text in the textarea
-                        document.execCommand('copy'); //finally send the copy command
-                        document.body.removeChild(clipboardTextElem); //get rid of the evidence
-
+                        //copy to clipboard
+                        try{
+                            DiscordNative.clipboard.copy(encodedStr);
+                            UI.showToast("3y3 copied to clipboard!", { type: "info" });    
+                        }catch(err){
+                            UI.showToast("Failed to copy to clipboard!", { type: "error", forceShow: true });   
+                            Logger.error("YABDP4Nitro", err);
+                        }
+                        
                     } //end of onClick function
                 }) //end of react createElement
             ); //end of profileBannerButton element push
@@ -2887,13 +2970,13 @@ module.exports = class YABDP4Nitro {
             confirmText: "Download Now",
             onConfirm: async (e) => {
                 if(remoteFile){
-                    await new Promise(r => require("fs").writeFile(require("path").join(BdApi.Plugins.folder, `${this.meta.name}.plugin.js`), remoteFile, r));
+                    await new Promise(r => require("fs").writeFile(require("path").join(Plugins.folder, `${this.meta.name}.plugin.js`), remoteFile, r));
                     try {
                         let currentVersionInfo = Data.load(this.meta.name, "currentVersionInfo");
                         currentVersionInfo.hasShownChangelog = false;
                         Data.save(this.meta.name, "currentVersionInfo", currentVersionInfo);
                     } catch(err){
-                        UI.showToast("An error occurred when trying to download the update!", { type: "error" });
+                        UI.showToast("An error occurred when trying to download the update!", { type: "error", forceShow: true });
                     }
                 }
             }
@@ -2913,9 +2996,9 @@ module.exports = class YABDP4Nitro {
             Logger.warn(this.meta.name, err);
             Logger.info(this.meta.name, "Error parsing JSON. Resetting file to default...");
             //watch this shit yo
-            require("fs").rmSync(require("path").join(BdApi.Plugins.folder, `${this.meta.name}.config.json`));
-            BdApi.Plugins.reload(this.meta.name);
-            BdApi.Plugins.enable(this.meta.name);
+            require("fs").rmSync(require("path").join(Plugins.folder, `${this.meta.name}.config.json`));
+            Plugins.reload(this.meta.name);
+            Plugins.enable(this.meta.name);
             return;
         }
 
@@ -2961,7 +3044,12 @@ module.exports = class YABDP4Nitro {
         DOM.removeStyle(this.meta.name);
         DOM.removeStyle("YABDP4NitroBadges");
         usrBgUsers = [];
-        BdApi.unlinkJS("ffmpeg.js");
+        
+        let ffmpegScript = document.getElementById("ffmpegScript");
+        if(ffmpegScript){
+            ffmpegScript.remove();
+        }
+
         Data.save("YABDP4Nitro", "settings", settings);
         Logger.info(this.meta.name, "(v" + this.meta.version + ") has stopped.");
     }
