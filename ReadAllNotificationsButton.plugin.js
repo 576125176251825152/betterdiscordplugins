@@ -2,7 +2,7 @@
  * @name ReadAllNotificationsButton
  * @author DevilBro
  * @authorId 278543574059057154
- * @version 1.8.0
+ * @version 1.8.1
  * @description Adds a Clear Button to the Server List and the Mentions Popout
  * @invite Jx3TjNS
  * @donate https://www.paypal.me/MircoWittrien
@@ -94,7 +94,7 @@ module.exports = (_ => {
 						className: BDFDB.disCNS.guildiconwrapper + BDFDB.disCN._readallnotificationsbuttoninner,
 							children: BDFDB.ReactUtils.createElement("div", {
 							className: BDFDB.disCNS.guildiconchildwrapper + BDFDB.disCNS.guildiconchildwrappernohoverbg + BDFDB.disCN._readallnotificationsbuttonbutton,
-							children: "Read All",
+							children: "read all",
 							onClick: _ => {
 								if (!_this.settings.general.confirmClear) this.clearClick();
 								else BDFDB.ModalUtils.confirm(_this, _this.labels.modal_confirmnotifications, _ => this.clearClick());
@@ -169,18 +169,18 @@ module.exports = (_ => {
 					}
 					${BDFDB.dotCN._readallnotificationsbuttonframe} {
 						--guildbar-avatar-size: 48px;
-						height: 24px;
 						margin-bottom: 10px;
 					}
 					${BDFDB.dotCN._readallnotificationsbuttonframe}:active {
 						transform: translateY(1px);
 					}
-					${BDFDB.dotCN._readallnotificationsbuttoninner} {
+					#app-mount ${BDFDB.dotCN._readallnotificationsbuttonframe},
+					#app-mount ${BDFDB.dotCN._readallnotificationsbuttoninner},
+					#app-mount ${BDFDB.dotCN._readallnotificationsbuttonbutton} {
 						height: 24px;
 					}
 					${BDFDB.dotCN._readallnotificationsbuttonbutton} {
 						border-radius: 4px;
-						height: 24px;
 						font-size: 12px;
 						line-height: 1.3;
 						white-space: nowrap;

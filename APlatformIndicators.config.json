@@ -1,3 +1,11 @@
 {
-    "lastVersion": "1.5.15"
+    "lastVersion": "1.5.15",
+    "settings": {
+        "icons": {
+            "web": true,
+            "desktop": true,
+            "mobile": true,
+            "embedded": true
+        }
+    }
 }

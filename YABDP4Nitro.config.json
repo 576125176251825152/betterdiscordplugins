@@ -1,6 +1,6 @@
 {
     "currentVersionInfo": {
-        "version": "5.8.0",
+        "version": "5.9.0",
         "hasShownChangelog": true
     },
     "settings": {
@@ -351,7 +351,15 @@
             "1354894010661212241": "a_026b2d22a4a39b7b00c622771ec9b1be",
             "1354894010682183861": "a_b3c43599032979c61ca6edc5912b77e3",
             "1354894010728321204": "a_4945e17c8ddf8ca470e505c07f191400",
-            "1354894010749292685": "a_f0d55a858c3ceb5d082b3e6a7d2a8fea"
+            "1354894010749292685": "a_f0d55a858c3ceb5d082b3e6a7d2a8fea",
+            "1349849614135853087": "nameplates/nameplates/cherry_blossoms/",
+            "1349849614161019002": "nameplates/nameplates/cat_beans/",
+            "1349849614194573312": "nameplates/nameplates/spirit_of_spring/",
+            "1349849614219739227": "nameplates/nameplates/twilight/",
+            "1349849614249099335": "nameplates/nameplates/koi_pond/",
+            "1349849614274265180": "nameplates/nameplates/vengeance/",
+            "1349849614303625308": "nameplates/nameplates/cityscape/",
+            "1349849614337179778": "nameplates/nameplates/angels/"
         },
         "customPFPs": true,
         "experiments": false,

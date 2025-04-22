@@ -4,16 +4,8 @@
 	--bdfdb-blurple: var(--brand-experiment, hsl(235, calc(var(--saturation-factor, 1) * 85.6%), 64.7%));
 }
 
-#bd-notices:has(.bd-notice) {
-	display: block;
-	width: 100vw;
-	position: fixed;
-	top: 0;
-	left: 0;
-	z-index: 1000;
-}
-[REPLACE_CLASS_appbase]:has(#bd-notices .bd-notice) {
-	margin-top: 36px;
+#bd-notices {
+	grid-area: notice;
 }
 
 #app-mount [REPLACE_CLASS_h5] {
@@ -1495,12 +1487,6 @@ input[REPLACE_CLASS_input][REPLACE_CLASS_inputerror] {
 [REPLACE_CLASS_tooltip][REPLACE_CLASS_tooltipcustom] [REPLACE_CLASS_tooltipnote],
 [REPLACE_CLASS_tooltiplistitem][REPLACE_CLASS_tooltipcustom] [REPLACE_CLASS_tooltipnote] {
 	color: #bbb;
-}
-[REPLACE_CLASS_tooltipcustom] [REPLACE_CLASS_tooltippointer][REPLACE_CLASS_tooltippointerbg]:after {
-	border-color: transparent !important;
-}
-[REPLACE_CLASS_tooltipcustom] [REPLACE_CLASS_tooltippointer] {
-	border-top-color: inherit !important;
 }
 [REPLACE_CLASS_tooltipcustom] [REPLACE_CLASS_tooltipguildnametext],
 [REPLACE_CLASS_tooltipcustom] [REPLACE_CLASS_tooltipmutetext] {
