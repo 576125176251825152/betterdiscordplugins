@@ -1,5 +1,8 @@
 {
 	"all": {
+		"favorizedFriends": [
+			"204291927116349440"
+		],
 		"general": {
 			"addTotalAmount": true,
 			"addBlockedCategory": true,
@@ -8,6 +11,7 @@
 			"addHiddenCategory": true,
 			"addSortOptions": true,
 			"addMutualGuild": true
-		}
+		},
+		"hiddenFriends": []
 	}
 }
