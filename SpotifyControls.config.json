@@ -34,6 +34,7 @@
 			"addBy": true,
 			"addTimeline": true,
 			"addActivityButton": true,
+			"hideDisabled": false,
 			"doubleBack": true
 		}
 	}

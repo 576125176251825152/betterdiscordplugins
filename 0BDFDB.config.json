@@ -1,7 +1,7 @@
 {
 	"all": {
 		"changeLogs": {
-			"BDFDB": "4.1.8",
+			"BDFDB": "4.1.9",
 			"BetterFriendList": "1.6.1",
 			"BetterSearchPage": "1.2.5",
 			"GameActivityToggle": "1.3.6",
@@ -12,7 +12,7 @@
 			"RevealAllSpoilers": "1.1.2",
 			"ServerDetails": "1.2.7",
 			"SplitLargeMessages": "1.8.7",
-			"SpotifyControls": "1.4.8"
+			"SpotifyControls": "1.4.9"
 		},
 		"choices": {
 			"toastPosition": "right"
@@ -25,7 +25,7 @@
 			"useChromium": false
 		},
 		"hashes": {
-			"0BDFDB.data.json": "530157d21ee76865bbfcb42eb6f226bbb8410c50",
+			"0BDFDB.data.json": "8bb7bc71ab9c2ffd18adf16de45bc01abfc84978",
 			"0BDFDB.raw.css": "d4e377e8c00f6f7390938129f1ce4051c3245d49"
 		}
 	}
