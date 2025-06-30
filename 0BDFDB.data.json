@@ -199,9 +199,9 @@
 			"getMessageAuthor": [".channel_id);return"]
 		}},
 		"MessageComponentUtils": {"strings": [".UNBLOCK_TO_JUMP_BODY", ".altKey"]},
-		"MessageManageUtils": {"strings": ["showMentionToggle", ".TEXTAREA_FOCUS", "message-actions"], "exported": false, "value": "exports", "map": {
+		"MessageManageUtils": {"strings": ["showMentionToggle", "message-actions"], "exported": false, "value": "exports", "map": {
 			"copyLink": ["MESSAGE_LINK_COPIED"],
-			"replyToMessage": ["showMentionToggle", ".TEXTAREA_FOCUS"]
+			"replyToMessage": ["showMentionToggle"]
 		}},
 		"MessageParser": {"props": ["parseEmbedTitle", "defaultRules"]},
 		"MessagePinUtils": {"props": ["pinMessage", "unpinMessage"]},
@@ -363,7 +363,7 @@
 			"LinkButton": [".apply(this"]
 		}},
 		"ScrollerBase": {"strings": ["paddingFix", "getScrollerState"]},
-		"SearchResultsPagination": {"strings": ["pageLength", "changePage", "maxVisiblePages"]},
+		"SearchResultsPagination": {"strings": ["maxVisiblePages", "pageSize", "container"]},
 		"SpinnerComponents": {"strings": ["WANDERING_CUBES", "wanderingCubes", ".spinningCircleInner"], "exported": false, "value": "exports", "map": {
 			"Spinner": [".spinningCircleInner"],
 			"Types": ["WANDERING_CUBES", "wanderingCubes"]
@@ -566,7 +566,7 @@
 		"SearchResults": {"strings": ["renderNoResults", "emptyResultsText", "isSearching"], "noSearch": true},
 		"SearchResultsHeader": {"strings": [".MOST_RELEVANT", "searchByMode"]},
 		"SearchResultsInner": {"strings": ["totalResults", "resultsBlocked", "\"search-results\""], "noSearch": true},
-		"SearchResultsPagination": {"strings": ["pageLength", "changePage", "maxVisiblePages"]},
+		"SearchResultsPagination": {"strings": ["maxVisiblePages", "pageSize", "container"]},
 		"SettingsView": {"strings": ["tabBarItemContainer", "PROFILE_CUSTOMIZATION", "badgeCount"]},
 		"Shakeable": {"protos": ["shake", "getDefaultAnimProps", "stop"]},
 		"Spoiler": {"strings": [".removeObscurity", "onReveal:"]},
@@ -903,6 +903,7 @@
 			"changeLogButton": "changeLogButton_b6d233",
 			"charCounter": "counter_89de42",
 			"changeLogModal": "changeLogModal_bad42d",
+			"channelHeaderDivider": "divider_348c72",
 			"collapseContainer": "container_54728c",
 			"collapseContainerCollapsed": "collapsed_54728c",
 			"collapseContainerHeader": "header_54728c",
@@ -1456,7 +1457,7 @@
 		"HeaderBar": {"props": ["container", "children", "toolbar"]},
 		"HeaderBarDiscovery": {"props": ["headerBar", "icon", "backdrop"]},
 		"HeaderBarDiscoverySearch": {"props": ["searchFloating", "search"]},
-		"HeaderBarExtras": {"props": ["forumOrHome", "search"]},
+		"HeaderBarExtras": {"props": ["updateIconForeground", "search"]},
 		"HeaderBarSearch": {"props": ["search", "searchBar", "open"]},
 		"HeaderBarTopic": {"props": ["topic", "expandable", "content"]},
 		"Heading": {"props": ["eyebrow", "code"]},
@@ -1487,7 +1488,7 @@
 		"MemberSince": {"props": ["memberSince", "discordIcon"]},
 		"MembersWrapper": {"props": ["membersWrap", "membersGroup"]},
 		"Message": {"props": ["message", "mentioned"]},
-		"MessageAccessory": {"props": ["embedWrapper", "gifFavoriteButton"]},
+		"MessageAccessory": {"props": ["confirmText", "gifFavoriteButton"]},
 		"MessageAttachment": {"props": ["removeMosaicItemButton", "inline"]},
 		"MessageBlocked": {"props": ["blockedMessageText", "expanded"]},
 		"MessageBody": {"props": ["markupRtl", "edited"]},
@@ -1964,7 +1965,7 @@
 		"channelheaderdiscovery": ["HeaderBarDiscovery", "headerBar"],
 		"channelheaderdiscoverysearch": ["HeaderBarDiscoverySearch", "searchBar"],
 		"channelheaderdiscoverysearchfloating": ["HeaderBarDiscoverySearch", "searchFloating"],
-		"channelheaderdivider": ["HeaderBar", "divider"],
+		"channelheaderdivider": ["BDFDB", "channelHeaderDivider"],
 		"channelheaderheaderbar": ["HeaderBar", "container"],
 		"channelheaderheaderbarthemed": ["HeaderBar", "themed"],
 		"channelheaderheaderbartitle": ["HeaderBar", "title"],
@@ -2174,7 +2175,6 @@
 		"embedvideoactions": ["Embed", "embedVideoActions"],
 		"embedvideoimagecomponent": ["Embed", "embedVideoImageComponent"],
 		"embedvideoimagecomponentinner": ["Embed", "embedVideoImageComponentInner"],
-		"embedwrapper": ["MessageAccessory", "embedWrapper"],
 		"emoji": ["Emoji", "emoji"],
 		"emojiold": ["NotFound", "emoji"],
 		"emojibutton": ["EmojiButton", "emojiButton"],
@@ -3070,8 +3070,6 @@
 		"tabularnumbers": ["Text2", "tabularNumbers"],
 		"textarea": ["ChannelTextArea", "textArea"],
 		"textareaaccessorybar": ["ChannelTextArea", "accessoryBar"],
-		"textareaaccessorybarleft": ["ChannelTextArea", "accessoryBarLeft"],
-		"textareaaccessorybarright": ["ChannelTextArea", "accessoryBarRight"],
 		"textareaattachbutton": ["ChannelTextAreaAttachButton", "attachButton"],
 		"textareaattachbuttoninner": ["ChannelTextAreaAttachButton", "attachButtonInner"],
 		"textareaattachbuttonplus": ["ChannelTextAreaAttachButton", "attachButtonPlus"],
