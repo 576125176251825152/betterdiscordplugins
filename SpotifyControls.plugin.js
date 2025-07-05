@@ -2,7 +2,7 @@
  * @name SpotifyControls
  * @author DevilBro
  * @authorId 278543574059057154
- * @version 1.5.0
+ * @version 1.5.1
  * @description Adds a Control Panel while listening to Spotify on a connected Account
  * @invite Jx3TjNS
  * @donate https://www.paypal.me/MircoWittrien
@@ -196,6 +196,7 @@ module.exports = (_ => {
 									children: [
 										BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.TextElement, {
 											className: BDFDB.disCN._spotifycontrolssong,
+											color: BDFDB.LibraryComponents.TextElement.Colors.PRIMARY,
 											children: BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.TextScroller, {
 												children: lastSong.details
 											})
@@ -429,11 +430,11 @@ module.exports = (_ => {
 							className: BDFDB.disCN._spotifycontrolsbartext,
 							children: [
 								BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.TextElement, {
-									size: BDFDB.LibraryComponents.TextElement.Sizes.SIZE_12,
+									size: BDFDB.LibraryComponents.TextElement.Sizes.SIZE_10,
 									children: this.formatTime(currentTime)
 								}),
 								BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.TextElement, {
-									size: BDFDB.LibraryComponents.TextElement.Sizes.SIZE_12,
+									size: BDFDB.LibraryComponents.TextElement.Sizes.SIZE_10,
 									children: this.formatTime(maxTime)
 								})
 							]
@@ -662,21 +663,6 @@ module.exports = (_ => {
 					}
 					${BDFDB.dotCN._spotifycontrolssettingslabel} {
 						margin-left: 10px;
-					}
-					${BDFDB.dotCNS._bdminimalmode + BDFDB.dotCN._spotifycontrolsbar} {
-						--bar-size: 3px;
-					}
-					${BDFDB.dotCNS._bdminimalmode + BDFDB.dotCNS._spotifycontrolscontainer + BDFDB.dotCN.accountinfobutton} {
-						width: 26px;
-						height: 26px;
-					}
-					${BDFDB.dotCNS._bdminimalmode + BDFDB.dotCNS._spotifycontrolscontainer + BDFDB.dotCN.size14} {
-						font-size: 13px;
-						line-height: 13px;
-					}
-					${BDFDB.dotCNS._bdminimalmode + BDFDB.dotCNS._spotifycontrolscontainer + BDFDB.dotCN.size12} {
-						font-size: 11px;
-						line-height: 11px;
 					}
 				`;
 			}
