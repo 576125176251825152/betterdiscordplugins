@@ -1,6 +1,6 @@
 {
     "currentVersionInfo": {
-        "version": "6.1.4",
+        "version": "6.2.1",
         "hasShownChangelog": true
     },
     "settings": {
@@ -52,6 +52,7 @@
         "enableClipsExperiment": true,
         "disableUserBadge": false,
         "nameplatesEnabled": true,
+        "clipTimestamp": 2,
         "videoCodec": -1
     }
 }
