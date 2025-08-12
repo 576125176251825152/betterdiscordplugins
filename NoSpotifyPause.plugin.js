@@ -1,40 +1,53 @@
 /**
  * @name NoSpotifyPause
  * @description Prevents Discord from pausing your Spotify when streaming or gaming.
- * @version 0.0.7
- * @author bep
- * @authorId 147077474222604288
- * @authorLink https://github.com/bepvte
- * @website https://github.com/bepvte/bd-addons
- * @source https://github.com/bepvte/bd-addons/blob/main/plugins/NoSpotifyPause.plugin.js
- */
+ * @version 1.0.1
+ * @author nicola02nb bep
+ * @invite hFuY8DfDGK
+ * @authorLink https://github.com/nicola02nb
+ * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/NoSpotifyPause
+*/
 const config = {
-  changelog: [
-    { title: "Improvements", type: "improved", items: ["Removed ZeresPlugin library dependency"] },
-    { title: "Bug Fix", type: "fixed", items: ["Fixed Plugin not working"] },
-  ]
+	changelog: [
+		{ title: "New Features", type: "added", items: ["Added changelog"] },
+		//{ title: "Bug Fix", type: "fixed", items: [""] },
+		//{ title: "Improvements", type: "improved", items: [""] },
+		//{ title: "On-going", type: "progress", items: [""] }
+	]
 };
 
-const { Webpack } = BdApi;
+const { Webpack, Patcher, Data, UI } = BdApi;
 
 const SpotifyStore = Webpack.getStore("SpotifyStore");
 
-const [ SpotifyModule, PauseFunction ] = [...Webpack.getWithKey(Webpack.Filters.byStrings("PLAYER_PAUSE"))];
+const [SpotifyModule, PauseFunction] = [...Webpack.getWithKey(Webpack.Filters.byStrings("PLAYER_PAUSE"))];
 
 module.exports = class NoSpotifyPause {
-  constructor(meta) {
-    this.meta = meta;
-    this.BdApi = new BdApi(this.meta.name);
-  }
-  start() {    
-    this.BdApi.Patcher.instead(SpotifyModule, PauseFunction, (e, t) => {
-      this.BdApi.Logger.log("Preventing Spotify from pausing");
-    });
-    this.BdApi.Patcher.instead(SpotifyStore, "wasAutoPaused", (context) => {
-      return false;
-    });
-  }
-  stop() {
-    this.BdApi.Patcher.unpatchAll();
-  }
+	constructor(meta) {
+		this.meta = meta;
+	}
+
+	showChangelog() {
+		const savedVersion = Data.load(this.meta.name, "version");
+		if (savedVersion !== this.meta.version && config.changelog.length > 0) {
+			UI.showChangelogModal({
+				title: this.meta.name,
+				subtitle: this.meta.version,
+				changes: config.changelog
+			});
+			Data.save(this.meta.name, "version", this.meta.version);
+		}
+	}
+
+	start() {
+		this.showChangelog();
+		Patcher.instead(this.meta.name, SpotifyModule, PauseFunction, (originalFunc, args) => { });
+		Patcher.instead(this.meta.name, SpotifyStore, "wasAutoPaused", (originalFunc, args) => {
+			return false;
+		});
+	}
+
+	stop() {
+		Patcher.unpatchAll(this.meta.name);
+	}
 };
