@@ -4,7 +4,7 @@
         "stickerButton": true,
         "gifButton": false,
         "giftButton": true,
-        "attachButton": false,
+        "attachButton": true,
         "appLauncherButton": true,
         "messageActions": {
             "quickReactions": true,
@@ -37,7 +37,7 @@
             "helpButton": true
         },
         "compatibility": {
-            "invisibleTypingButton": false
+            "invisibleTypingButton": true
         }
     }
 }

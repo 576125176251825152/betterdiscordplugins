@@ -1,6 +1,6 @@
 {
     "currentVersionInfo": {
-        "version": "6.2.5",
+        "version": "6.2.8",
         "hasShownChangelog": true
     },
     "settings": {
@@ -24,7 +24,7 @@
         "stickerBypass": false,
         "profileV2": false,
         "forceStickersUnlocked": false,
-        "changePremiumType": true,
+        "changePremiumType2": 1,
         "videoCodec2": -1,
         "clientThemes": true,
         "lastGradientSettingStore": -1,
@@ -53,6 +53,7 @@
         "disableUserBadge": false,
         "nameplatesEnabled": true,
         "clipTimestamp": 2,
+        "removeNotStaffWarning": true,
         "videoCodec": -1
     }
 }
