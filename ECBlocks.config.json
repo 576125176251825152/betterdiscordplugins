@@ -1,4 +1,5 @@
 {
     "autoCollapse": true,
-    "instantCollapse": true
+    "instantCollapse": true,
+    "maxHeight": 1200
 }

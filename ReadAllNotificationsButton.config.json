@@ -1,7 +1,7 @@
 {
 	"all": {
 		"batch": {
-			"dms": false,
+			"dms": true,
 			"guilds": true,
 			"muted": true
 		},

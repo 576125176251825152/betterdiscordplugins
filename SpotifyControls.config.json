@@ -1,15 +1,7 @@
 {
 	"all": {
 		"buttons": {
-			"share": {
-				"small": false,
-				"big": true
-			},
-			"shuffle": {
-				"small": false,
-				"big": true
-			},
-			"previous": {
+			"next": {
 				"small": true,
 				"big": true
 			},
@@ -17,25 +9,33 @@
 				"small": true,
 				"big": true
 			},
-			"next": {
+			"previous": {
 				"small": true,
 				"big": true
 			},
 			"repeat": {
-				"small": false,
+				"small": true,
+				"big": true
+			},
+			"share": {
+				"small": true,
+				"big": true
+			},
+			"shuffle": {
+				"small": true,
 				"big": true
 			},
 			"volume": {
-				"small": false,
+				"small": true,
 				"big": true
 			}
 		},
 		"general": {
-			"addBy": true,
-			"addTimeline": true,
 			"addActivityButton": true,
-			"hideDisabled": false,
-			"doubleBack": true
+			"addBy": false,
+			"addTimeline": true,
+			"doubleBack": true,
+			"hideDisabled": false
 		}
 	}
 }
