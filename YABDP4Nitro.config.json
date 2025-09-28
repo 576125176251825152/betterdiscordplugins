@@ -1,6 +1,6 @@
 {
     "currentVersionInfo": {
-        "version": "6.2.8",
+        "version": "6.3.0",
         "hasShownChangelog": true
     },
     "settings": {
@@ -54,6 +54,7 @@
         "nameplatesEnabled": true,
         "clipTimestamp": 2,
         "removeNotStaffWarning": true,
+        "editMessageWithEmoji": true,
         "videoCodec": -1
     }
 }

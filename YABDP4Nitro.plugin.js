@@ -2,7 +2,7 @@
  * @name YABDP4Nitro
  * @author Riolubruh
  * @authorLink https://github.com/riolubruh
- * @version 6.2.8
+ * @version 6.3.0
  * @invite EFmGEWAUns
  * @source https://github.com/riolubruh/YABDP4Nitro
  * @donate https://github.com/riolubruh/YABDP4Nitro?tab=readme-ov-file#donate
@@ -211,7 +211,8 @@ const defaultSettings = {
     "disableUserBadge": false,
     "nameplatesEnabled": true,
     "clipTimestamp": 2,
-    "removeNotStaffWarning": true
+    "removeNotStaffWarning": true,
+    "editMessageWithEmoji": true
 };
 const defaultData = {
     avatarDecorations: {},
@@ -236,16 +237,20 @@ const config = {
             "discord_id": "359063827091816448",
             "github_username": "riolubruh"
         }],
-        "version": "6.2.8",
+        "version": "6.3.0",
         "description": "Unlock all screensharing modes, and use cross-server & GIF emotes!",
         "github": "https://github.com/riolubruh/YABDP4Nitro",
         "github_raw": "https://raw.githubusercontent.com/riolubruh/YABDP4Nitro/main/YABDP4Nitro.plugin.js"
     },
     changelog: [
         {
-            title: "6.2.8",
+            title: "6.3.0",
             items: [
-                "Actually fix Fake Profile Effects after Discord updated it (last fix was not tested properly)."
+                "Changed it so that adding a heiphen before an emoji skips bypass for that emoji instead of a backslash since Discord added their own functionality for that scenario at some point.",
+                "Fixed static emojis not working since last update didn't implement the fix for emojis properly.",
+                "Made a small change to the updating system to hopefully reduce problems caused by it.",
+                "Fixed plugin not fetching all available Avatar Decorations and Nameplates.",
+                "Added new feature: editing messages with text-based fakemoji (i.e. not uploaded emojis) will show them as emoji instead of the actual text. On by default, it can be disabled under the \"Replace Fakemoji When Editing Message\" option."
             ]
         }
     ],
@@ -323,6 +328,7 @@ const config = {
                         { label: "Hyperlink/Vencord-Like Mode", value: 3 }
                     ]
                 },
+                { type: "switch", id: "editMessageWithEmoji", name: "Replace Fakemoji When Editing Message", note: "Replaces text-based fakemoji with their emoji when editing a message.", value: () => settings.editMessageWithEmoji },
                 { type: "switch", id: "emojiBypassForValidEmoji", name: "Don't Use Emote Bypass if Emote is Unlocked", note: "Disable to use emoji bypass even if bypass is not required for that emoji.", value: () => settings.emojiBypassForValidEmoji },
                 { type: "switch", id: "PNGemote", name: "Use PNG instead of WEBP", note: "Use the PNG version of static emoji for higher quality!", value: () => settings.PNGemote },
                 { type: "switch", id: "stickerBypass", name: "Sticker Bypass", note: "Enable or disable using the sticker bypass. I recommend using An00nymushun's DiscordFreeStickers over this. Animated APNG/WEBP/Lottie Stickers WILL NOT animate.", value: () => settings.stickerBypass },
@@ -381,7 +387,7 @@ const config = {
             collapsible: true,
             shown: false,
             settings: [
-                { type: "dropdown", id: "changePremiumType2", name: "Change Premium Type", note: "This option will set your user to different Premium Types on the client-side, unlocking (or locking) certain things. Options unlocked by this may or may not work. If you don't know what you're doing, it's best to leave this option disabled. Set this option to at least Nitro Basic if you use SimpleDiscordCrypt to avoid issues.", value: () => settings.changePremiumType2, options:[
+                { type: "dropdown", id: "changePremiumType2", name: "Change Premium Type", note: "This option will set your user to different Premium Types on the client-side, unlocking (or locking) certain things. Options unlocked by this may or may not work. If you don't know what you're doing, IT'S BEST TO LEAVE THIS OPTION DISABLED.", value: () => settings.changePremiumType2, options:[
                     { label: "Disabled (Actual Nitro Status)", value: -1 },
                     { label: "Free User", value: null},
                     { label: "Nitro Basic", value: 3},
@@ -468,7 +474,7 @@ module.exports = class YABDP4Nitro {
 
         Patcher.unpatchAll(this.meta.name);
 
-        Dispatcher.unsubscribe("COLLECTIBLES_CATEGORIES_FETCH_SUCCESS", this.storeProductsFromCategories);
+        Dispatcher.unsubscribe("COLLECTIBLES_CATEGORIES_V2_FETCH_SUCCESS", this.storeProductsFromCategories);
 
         if(settings.changePremiumType2 > -1 && settings.changePremiumType2 <= 2){
             try {
@@ -594,7 +600,7 @@ module.exports = class YABDP4Nitro {
             }
         }
 
-        Dispatcher.unsubscribe("COLLECTIBLES_CATEGORIES_FETCH_SUCCESS", this.storeProductsFromCategories);
+        Dispatcher.unsubscribe("COLLECTIBLES_CATEGORIES_V2_FETCH_SUCCESS", this.storeProductsFromCategories);
 
         if(settings.fakeAvatarDecorations){
             try{
@@ -714,7 +720,7 @@ module.exports = class YABDP4Nitro {
         try{
             if(settings.fakeAvatarDecorations || settings.nameplatesEnabled){
                 //subscribe to successful collectible category fetch event
-                Dispatcher.subscribe("COLLECTIBLES_CATEGORIES_FETCH_SUCCESS", this.storeProductsFromCategories);
+                Dispatcher.subscribe("COLLECTIBLES_CATEGORIES_V2_FETCH_SUCCESS", this.storeProductsFromCategories);
     
                 //trigger collectibles fetch
                 FetchCollectibleCategories({
@@ -1185,7 +1191,7 @@ module.exports = class YABDP4Nitro {
     async resolutionSwapperV2(){
 
         //wait for lazy loaded modules
-        if(this.GoLiveV2ModalMod == undefined) this.GoLiveV2ModalMod = await Webpack.waitForModule(Webpack.Filters.byStrings("golivemodalv2"), {defaultExport:false, signal: controller.signal});
+        if(this.GoLiveV2ModalMod == undefined) this.GoLiveV2ModalMod = await Webpack.waitForModule(Webpack.Filters.byStrings("GoLiveModalV2"), {defaultExport:false, signal: controller.signal});
 
         if(this.StreamOptionsButtonClassesMod == undefined) this.StreamOptionsButtonClassesMod = await Webpack.waitForModule(Webpack.Filters.byKeys("streamOptionsButton", "settingsIcon"), {signal: controller.signal});
 
@@ -1198,7 +1204,7 @@ module.exports = class YABDP4Nitro {
             maxBitrateToSet: undefined
         };
 
-        let goLiveModalV2FnName = this.findMangledName(this.GoLiveV2ModalMod, x=>x, "goLiveModalV2");
+        let goLiveModalV2FnName = this.findMangledName(this.GoLiveV2ModalMod, x=>x, "GoLiveModalV2");
         if(!goLiveModalV2FnName) return;
 
         Patcher.after(this.meta.name, this.GoLiveV2ModalMod, goLiveModalV2FnName, (_,args,ret) => {
@@ -1215,10 +1221,10 @@ module.exports = class YABDP4Nitro {
                 GLMV2Opt.fpsToSet = undefined;
             }
 
-            const ModalFooter = ret?.props?.children?.props?.children[2]?.props?.children[0]?.props?.children[1]?.props?.children;
+            const RightButtonGroup = ret?.props?.children?.props?.children?.[1]?.props?.children?.[0]?.props?.children?.[1]?.props?.children;
             
-            if(ModalFooter) {
-                ModalFooter.splice(2,0,React.createElement("button",{
+            if(RightButtonGroup) {
+                RightButtonGroup.splice(2,0,React.createElement("button",{
                     class: `${this.StreamOptionsButtonClassesMod.streamOptionsButton} ${buttonClassModule.button} ${buttonClassModule.lookFilled} ${buttonClassModule.colorPrimary} ${buttonClassModule.sizeIcon} ${buttonClassModule.grow}`,
                     style: {
                         height: "46px",
@@ -1814,15 +1820,12 @@ module.exports = class YABDP4Nitro {
             originalFunction(args);
         });
 
-        Patcher.after(this.meta.name, ClipsEnabledMod, "useEnableClips", (_, args, ret) => {
+        Patcher.after(this.meta.name, ClipsEnabledMod, "useEnableClips", () => {
             //I have no earthly idea why but, instead patching this one causes React crashes.
             // Luckily after-patching prevents it from crashing and it still unlocks it as it should
             return true;
         });
         Patcher.instead(this.meta.name, ClipsEnabledMod, "areClipsEnabled", () => {
-            return true;
-        });
-        Patcher.instead(this.meta.name, ClipsEnabledMod, "isPremium", () => {
             return true;
         });
         Patcher.instead(this.meta.name, ClipsStore, "isViewerClippingAllowedForUser", () => {
@@ -2599,8 +2602,8 @@ module.exports = class YABDP4Nitro {
 
     //fetch collectibles - decorations and nameplates are stored in data
     storeProductsFromCategories = event => {
-        if(event.categories){
-            event.categories.forEach(category => {
+        if(event?.categories?.categories){
+            event.categories.categories.forEach(category => {
                 category.products.forEach(product => {
                     product.items.forEach(item => {
                         if(item.asset){
@@ -2726,7 +2729,7 @@ module.exports = class YABDP4Nitro {
                     const assetHash = data.avatarDecorations[decorationId];
 
                     //remove existing nameplates from decoration list
-                    if(assetHash.startsWith('nameplates/nameplates/')){
+                    if(assetHash.includes('nameplate')){
                         delete data.avatarDecorations[decorationId];
                         continue;
                     }
@@ -2798,12 +2801,12 @@ module.exports = class YABDP4Nitro {
     async UploadEmote(url, channelIdLmao, msg, emoji, runs, send){
 
         if(!msg[2].attachmentsToUpload) msg[2].attachmentsToUpload = [];
-        if(emoji === undefined){
-            let emoji = {animated: true, name: "default"};
+        if(emoji == undefined){
+            emoji = {animated: true, name: "default"};
         }
 
-        if(msg === undefined){
-            let msg = [channelIdLmao, {content: ""}, []];
+        if(msg == undefined){
+            msg = [channelIdLmao, {content: ""}, []];
         }
 
         let extension = ".gif";
@@ -3005,10 +3008,12 @@ module.exports = class YABDP4Nitro {
                             emojiUrl = emojiUrl.substr(0, emojiUrl.lastIndexOf(".")) + ".gif";
                         }
     
-                        //If there is a backslash (\) before the emote we are processing,
-                        if(msg[1].content.includes("\\<" + emoji.allNamesString.replace(/~\b\d+\b/g, "") + emoji.id + ">")) {
-                            //remove the backslash
-                            msg[1].content = msg[1].content.replace(("\\<" + emoji.allNamesString.replace(/~\b\d+\b/g, "") + emoji.id + ">"), ("<" + emoji.allNamesString.replace(/~\b\d+\b/g, "") + emoji.id + ">"));
+                        let emojiString = `<${emoji.animated ? "a:" : ":"}${emoji.name}:${emoji.id}>`;
+
+                        //If there is a heiphen (-) before the emote we are processing,
+                        if(msg[1].content.includes("-" + emojiString)) {
+                            //remove the heiphen
+                            msg[1].content = msg[1].content.replace(("-" + emojiString), emojiString);
                             //and skip bypass for that emote
                             return;
                         }
@@ -3016,7 +3021,7 @@ module.exports = class YABDP4Nitro {
                         //remove existing URL parameters and add custom URL parameters for user's size preference. quality is always lossless.
                         emojiUrl = emojiUrl.split("?")[0] + `?size=${settings.emojiSize}&quality=lossless&`;
                         //remove emote from message.
-                        msg[1].content = msg[1].content.replace(`<${emoji.animated ? "a" : ""}${emoji.allNamesString.replace(/~\b\d+\b/g, "")}${emoji.id}>`, "");
+                        msg[1].content = msg[1].content.replace(emojiString, "");
     
                         //queue for upload
                         emojis.push(emoji);
@@ -3137,7 +3142,7 @@ module.exports = class YABDP4Nitro {
                         return;
                     }
                 }
-                let emojiGhostIteration = 0; // dummy value we add to the end of the URL parameters to make the same emoji appear more than once despite having the same URL.
+                let emojiInteration = 0; // dummy value we add to the end of the URL parameters to make the same emoji appear more than once despite having the same URL.
                 msg.validNonShortcutEmojis.forEach(emoji => {
                     if(self.emojiBypassForValidEmoji(emoji, currentChannelId)) return;
                     if(emoji.type == "UNICODE") return;
@@ -3149,28 +3154,32 @@ module.exports = class YABDP4Nitro {
                         emojiUrl = emojiUrl.substr(0, emojiUrl.lastIndexOf(".")) + ".gif";
                     }
 
-                    if(msg.content.includes("\\<" + emoji.allNamesString.replace(/~\b\d+\b/g, "") + emoji.id + ">")){
-                        msg.content = msg.content.replace(("\\<" + emoji.allNamesString.replace(/~\b\d+\b/g, "") + emoji.id + ">"), ("<" + emoji.allNamesString.replace(/~\b\d+\b/g, "") + emoji.id + ">"));
-                        return; //If there is a backslash before the emoji, skip it.
+                    let emojiString = `<${emoji.animated ? "a:" : ":"}${emoji.name}:${emoji.id}>`;
+
+                    //If there is a heiphen before the emoji, skip it.
+                    if(msg.content.includes("-" + emojiString)){
+                        msg.content = msg.content.replace("-" + emojiString, emojiString);
+                        return; 
                     }
 
                     //if ghost mode is not required
-                    if(msg.content.replace(`<${emoji.animated ? "a" : ""}${emoji.allNamesString.replace(/~\b\d+\b/g, "")}${emoji.id}>`, "") == ""){
-                        msg.content = msg.content.replace(`<${emoji.animated ? "a" : ""}${emoji.allNamesString.replace(/~\b\d+\b/g, "")}${emoji.id}>`, emojiUrl.split("?")[0] + `?size=${settings.emojiSize}&quality=lossless& `);
+                    if(msg.content.replace(emojiString, "") == ""){
+                        msg.content = msg.content.replace(emojiString, emojiUrl.split("?")[0] + `?size=${settings.emojiSize}&quality=lossless `);
                         return;
                     }
-                    emojiGhostIteration++; //increment dummy value
+                    emojiInteration++; //increment dummy value
 
                     //if message already has ghostmodetext.
                     if(msg.content.includes(ghostmodetext)){
                         //remove processed emoji from the message
-                        msg.content = msg.content.replace(`<${emoji.animated ? "a" : ""}${emoji.allNamesString.replace(/~\b\d+\b/g, "")}${emoji.id}>`, ""),
-                            //add to the end of the message
-                            msg.content += " " + emojiUrl.split("?")[0] + `?size=${settings.emojiSize}&quality=lossless&${emojiGhostIteration}& `;
+                        msg.content = msg.content.replace(emojiString, "");
+                        //add to the end of the message
+                        msg.content += " " + emojiUrl.split("?")[0] + `?size=${settings.emojiSize}&quality=lossless&${emojiInteration} `;
                         return;
                     }
                     //if message doesn't already have ghostmodetext, remove processed emoji and add it to the end of the message with the ghost mode text
-                    msg.content = msg.content.replace(`<${emoji.animated ? "a" : ""}${emoji.allNamesString.replace(/~\b\d+\b/g, "")}${emoji.id}>`, ""), msg.content += ghostmodetext + "\n" + emojiUrl.split("?")[0] + `?size=${settings.emojiSize}&quality=lossless& `;
+                    msg.content = msg.content.replace(emojiString, "");
+                    msg.content += ghostmodetext + "\n" + emojiUrl.split("?")[0] + `?size=${settings.emojiSize}&quality=lossless `;
                 });
             }
 
@@ -3184,7 +3193,7 @@ module.exports = class YABDP4Nitro {
 
         //#region Classic Mode Patch
         //Original method
-        if(settings.emojiBypassType == 2){
+        else if(settings.emojiBypassType == 2){
 
             function classicModeMethod(msg, currentChannelId, self){
                 if(document.getElementsByClassName("sdc-tooltip").length > 0){
@@ -3195,7 +3204,7 @@ module.exports = class YABDP4Nitro {
                     }
                 }
                 //refer to previous bypasses for comments on what this all is for.
-                let emojiGhostIteration = 0;
+                let emojiInteration = 0;
                 msg.validNonShortcutEmojis.forEach(emoji => {
                     if(self.emojiBypassForValidEmoji(emoji, currentChannelId)) return;
                     if(emoji.type == "UNICODE") return;
@@ -3207,12 +3216,13 @@ module.exports = class YABDP4Nitro {
                         emojiUrl = emojiUrl.substr(0, emojiUrl.lastIndexOf(".")) + ".gif";
                     }
 
-                    if(msg.content.includes("\\<" + emoji.allNamesString.replace(/~\b\d+\b/g, "") + emoji.id + ">")){
-                        msg.content = msg.content.replace(("\\<" + emoji.allNamesString.replace(/~\b\d+\b/g, "") + emoji.id + ">"), ("<" + emoji.allNamesString.replace(/~\b\d+\b/g, "") + emoji.id + ">"));
-                        return; //If there is a backslash before the emoji, skip it.
+                    let emojiString = `<${emoji.animated ? "a:" : ":"}${emoji.name}:${emoji.id}>`;
+                    if(msg.content.includes("-" + emojiString)){
+                        msg.content = msg.content.replace(("-" + emojiString), emojiString);
+                        return; //If there is a heiphen before the emoji, skip it.
                     }
-                    emojiGhostIteration++;
-                    msg.content = msg.content.replace(`<${emoji.animated ? "a" : ""}${emoji.allNamesString.replace(/~\b\d+\b/g, "")}${emoji.id}>`, emojiUrl.split("?")[0] + `?size=${settings.emojiSize}&quality=lossless&${emojiGhostIteration}& `);
+                    emojiInteration++;
+                    msg.content = msg.content.replace(emojiString, emojiUrl.split("?")[0] + `?size=${settings.emojiSize}&quality=lossless&${emojiInteration} `);
                 });
             }
 
@@ -3220,23 +3230,13 @@ module.exports = class YABDP4Nitro {
             Patcher.before(this.meta.name, MessageActions, "sendMessage", (_, [currentChannelId, msg]) => {
                 classicModeMethod(msg, currentChannelId, this);
             });
-
-            //editing message in classic mode
-            Patcher.before(this.meta.name, MessageActions, "editMessage", (_, obj) => {
-                let msg = obj[2].content;
-                if(msg.search(/\d{18}/g) == -1) return;
-                if(msg.includes(":ENC:")) return; //Fix jank with editing SimpleDiscordCrypt encrypted messages.
-                msg.match(/<a:.+?:\d{18}>|<:.+?:\d{18}>/g).forEach(idfkAnymore => {
-                    obj[2].content = obj[2].content.replace(idfkAnymore, `https://cdn.discordapp.com/emojis/${idfkAnymore.match(/\d{18}/g)[0]}?size=${settings.emojiSize}&quality=lossless&`);
-                });
-            });
         }
         //#endregion
 
 
         //#region Vencord-like Patch
         //Vencord-like bypass
-        if(settings.emojiBypassType == 3){
+        else if(settings.emojiBypassType == 3){
             function vencordModeMethod(msg, currentChannelId, self){
                 if(document.getElementsByClassName("sdc-tooltip").length > 0){
                     let SDC_Tooltip = document.getElementsByClassName("sdc-tooltip")[0];
@@ -3246,7 +3246,7 @@ module.exports = class YABDP4Nitro {
                     }
                 }
                 //refer to previous bypasses for comments on what this all is for.
-                let emojiGhostIteration = 0;
+                let emojiInteration = 0;
                 msg.validNonShortcutEmojis.forEach(emoji => {
                     if(self.emojiBypassForValidEmoji(emoji, currentChannelId)) return;
                     if(emoji.type == "UNICODE") return;
@@ -3258,12 +3258,14 @@ module.exports = class YABDP4Nitro {
                         emojiUrl = emojiUrl.substr(0, emojiUrl.lastIndexOf(".")) + ".gif";
                     }
 
-                    if(msg.content.includes("\\<" + emoji.allNamesString.replace(/~\b\d+\b/g, "") + emoji.id + ">")){
-                        msg.content = msg.content.replace(("\\<" + emoji.allNamesString.replace(/~\b\d+\b/g, "") + emoji.id + ">"), ("<" + emoji.allNamesString.replace(/~\b\d+\b/g, "") + emoji.id + ">"));
-                        return; //If there is a backslash before the emoji, skip it.
+                    let emojiString = `<${emoji.animated ? "a:" : ":"}${emoji.name}:${emoji.id}>`;
+
+                    if(msg.content.includes("-" + emojiString)){
+                        msg.content = msg.content.replace(("-" + emojiString), emojiString);
+                        return; //If there is a heiphen before the emoji, skip it.
                     }
-                    emojiGhostIteration++;
-                    msg.content = msg.content.replace(`<${emoji.animated ? "a" : ""}${emoji.allNamesString.replace(/~\b\d+\b/g, "")}${emoji.id}>`, `[${emoji.name}](` + emojiUrl.split("?")[0] + `?size=${settings.emojiSize}&quality=lossless&${emojiGhostIteration}&)`);
+                    emojiInteration++;
+                    msg.content = msg.content.replace(emojiString, `[${emoji.name}](` + emojiUrl.split("?")[0] + `?size=${settings.emojiSize}&quality=lossless&${emojiInteration})`);
                 });
             }
 
@@ -3272,6 +3274,114 @@ module.exports = class YABDP4Nitro {
                 vencordModeMethod(msg, currentChannelId, this);
             });
         }
+        //#endregion
+
+        if(settings.editMessageWithEmoji){
+            //applying edited message
+            Patcher.before(this.meta.name, MessageActions, "editMessage", (_, [channelId, msgId, msg]) => {
+                if(msg.content.includes(":ENC:")) return; //Fix jank with editing SimpleDiscordCrypt encrypted messages.
+                                                          //...except SimpleDiscordCrypt has been broken for years, so really this does nothing and is only included as a tradition.
+    
+                let emojiInteration = 0;
+                
+                msg.content.match(/<a?:.+?:\d+>/g)?.forEach?.(emojiString => {
+    
+                    if(msg.content.includes("-" + emojiString)){
+                        msg.content = msg.content.replace(("-" + emojiString), emojiString);
+                        return; //If there is a heiphen before the emoji, skip it.
+                    }
+    
+                    let [animatedStr, name, id] = emojiString.replace("<","").replace(">","").split(":");
+                    let animatedBool = (animatedStr === "a");
+    
+                    let forcePNG = (!animatedBool && settings.PNGemote);
+                    let emojiUrl = AvatarDefaults.getEmojiURL({id, animated: animatedBool, size: settings.emojiSize, forcePNG });
+                    if(animatedBool){
+                        emojiUrl = emojiUrl.substr(0, emojiUrl.lastIndexOf(".")) + ".gif";
+                    }
+    
+                    
+                    emojiInteration++;
+                    switch(settings.emojiBypassType){
+                        default:
+                        case 0: //upload
+                        case 3: //vencord
+                            msg.content = msg.content.replace(emojiString, `[${name}](` + emojiUrl.split("?")[0] + `?size=${settings.emojiSize}&quality=lossless&${emojiInteration})`);
+                            break;
+    
+                        case 2: //classic
+                            msg.content = msg.content.replace(emojiString, emojiUrl.split("?")[0] + `?size=${settings.emojiSize}&quality=lossless&${emojiInteration} `);
+                            break;
+                        
+                        case 1: //ghost
+                            //if ghost mode is not required
+                            if(msg.content.replace(emojiString, "") == ""){
+                                msg.content = msg.content.replace(emojiString, emojiUrl.split("?")[0] + `?size=${settings.emojiSize}&quality=lossless `);
+                                return;
+                            }
+    
+                            //if message already has ghostmodetext.
+                            if(msg.content.includes(ghostmodetext)){
+                                //remove processed emoji from the message
+                                msg.content = msg.content.replace(emojiString, "");
+                                //add to the end of the message
+                                msg.content += " " + emojiUrl.split("?")[0] + `?size=${settings.emojiSize}&quality=lossless&${emojiInteration} `;
+                                return;
+                            }
+                            //if message doesn't already have ghostmodetext, remove processed emoji and add it to the end of the message with the ghost mode text
+                            msg.content = msg.content.replace(emojiString, "");
+                            msg.content += ghostmodetext + "\n" + emojiUrl.split("?")[0] + `?size=${settings.emojiSize}&quality=lossless `;
+                            break;
+                    }
+                    
+                });
+            });
+            
+            //starting editing message
+            Patcher.before(this.meta.name, MessageActions, "startEditMessageRecord", (_, [channelId, msg]) => {
+    
+                let idFromUrlRegex = /(?<=emojis\/)(\d+?)(?=\.(png|webp|gif|avif|jpg|jpeg))/gi;
+    
+                //vencord mode undo
+                let vencordRegex = /\[.+?\]\(https:\/\/cdn\.discordapp\.com\/emojis\/.+?\)/gi
+                if(msg.content.includes("[") && msg.content.includes("/emojis/")){
+                    msg.content.match(vencordRegex)?.forEach?.(matched => {
+                        let startOfName = matched.indexOf("[") + 1;
+                        let endOfName = matched.indexOf("]") - 1;
+                        let emojiName = matched.substring(startOfName, endOfName);
+        
+                        let startOfUrl = matched.indexOf("(") + 1;
+                        let endOfUrl = matched.indexOf(")") - 1;
+                        let emojiUrl = matched.substring(startOfUrl, endOfUrl);
+        
+                        let emojiId = emojiUrl.match(idFromUrlRegex)?.[0];
+        
+                        let animated = (emojiUrl.includes(".gif") || emojiUrl.includes(".avif"));
+                        if(emojiId != undefined && emojiUrl != undefined && emojiName != undefined){
+                            msg.content = msg.content.replace(matched, `<${animated ? "a:" : ":"}${emojiName}:${emojiId}>`)
+                        }
+                    });
+                }
+                
+                //cleanup ghost mode text
+                if(msg.content.includes(ghostmodetext))
+                    msg.content = msg.content.replace(ghostmodetext, "");
+    
+                //classic / ghost mode undo
+                let emojiUrlRegex = /https:\/\/cdn\.discordapp\.com\/emojis\/\d+\.(png|webp|gif|avif|jpg|jpeg).*?(?=$| )/gi
+                if(msg.content.includes("/emojis/")){
+                    msg.content.match(emojiUrlRegex)?.forEach?.(emojiUrl => {
+                        let emojiId = emojiUrl.match(idFromUrlRegex)?.[0];
+                        let animated = (emojiUrl.includes(".gif") || emojiUrl.includes(".avif"));
+    
+                        if(emojiId)
+                            msg.content = msg.content.replace(emojiUrl, `<${animated ? "a:" : ":"}emoji:${emojiId}>`)
+                    })
+                }
+            });
+
+        }
+
         //#endregion
     } //End of emojiBypass()
 
@@ -3286,8 +3396,10 @@ module.exports = class YABDP4Nitro {
 
                     if(contentItem.props.href.startsWith("https://cdn.discordapp.com/emojis/")){ //does this hyperlink have an emoji URL?
 
+                        if(contentItem.props.href == contentItem.props.title) continue;  //skip direct emoji URL (causes too much buggy behavior)
+
                         let emojiName = contentItem.props?.children[0]?.props?.children;
-                        if(emojiName == undefined) continue;
+                        if(emojiName == undefined) emojiName = "unknownEmoji"; //fallback to default emoji name if unknown
 
                         let key = contentItem.key; //store key
 
@@ -3852,10 +3964,13 @@ module.exports = class YABDP4Nitro {
 
             if(parseInt(remoteVersion[0]) > parseInt(currentVersion[0])){
                 this.newUpdateNotify(remoteMeta, fileContent);
+                return true;
             }else if(remoteVersion[0] == currentVersion[0] && parseInt(remoteVersion[1]) > parseInt(currentVersion[1])){
                 this.newUpdateNotify(remoteMeta, fileContent);
+                return true;
             }else if(remoteVersion[0] == currentVersion[0] && remoteVersion[1] == currentVersion[1] && parseInt(remoteVersion[2]) > parseInt(currentVersion[2])){
                 this.newUpdateNotify(remoteMeta, fileContent);
+                return true;
             }
         }
         catch(err){
@@ -3872,13 +3987,16 @@ module.exports = class YABDP4Nitro {
             confirmText: "Download Now",
             onConfirm: async (e) => {
                 if(remoteFile){
-                    await new Promise(r => fs.writeFile(path.join(Plugins.folder, `${this.meta.name}.plugin.js`), remoteFile, r));
+                    Plugins.disable(this.meta.name);
                     try {
+                        await new Promise(r => fs.writeFile(path.join(Plugins.folder, `${this.meta.name}.plugin.js`), remoteFile, r));
                         let currentVersionInfo = Data.load(this.meta.name, "currentVersionInfo");
                         currentVersionInfo.hasShownChangelog = false;
                         Data.save(this.meta.name, "currentVersionInfo", currentVersionInfo);
                     } catch(err){
                         UI.showToast("An error occurred when trying to download the update!", { type: "error", forceShow: true });
+                    }finally{
+                        Plugins.enable(this.meta.name);
                     }
                 }
             }
@@ -3977,7 +4095,7 @@ module.exports = class YABDP4Nitro {
         controller.abort();
         CurrentUser.premiumType = ORIGINAL_NITRO_STATUS;
         Patcher.unpatchAll(this.meta.name);
-        Dispatcher.unsubscribe("COLLECTIBLES_CATEGORIES_FETCH_SUCCESS", this.storeProductsFromCategories);
+        Dispatcher.unsubscribe("COLLECTIBLES_CATEGORIES_V2_FETCH_SUCCESS", this.storeProductsFromCategories);
         DOM.removeStyle(this.meta.name);
         DOM.removeStyle("YABDP4NitroBadges");
         
