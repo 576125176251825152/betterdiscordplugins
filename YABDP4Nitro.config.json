@@ -1,6 +1,6 @@
 {
     "currentVersionInfo": {
-        "version": "6.3.0",
+        "version": "6.5.1",
         "hasShownChangelog": true
     },
     "settings": {
@@ -55,6 +55,9 @@
         "clipTimestamp": 2,
         "removeNotStaffWarning": true,
         "editMessageWithEmoji": true,
+        "extraContextMenus": true,
+        "userSharpenPreferences": {},
+        "sharpenStreams": false,
         "videoCodec": -1
     }
 }

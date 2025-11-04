@@ -2,7 +2,7 @@
  * @name YABDP4Nitro
  * @author Riolubruh
  * @authorLink https://github.com/riolubruh
- * @version 6.3.0
+ * @version 6.5.1
  * @invite EFmGEWAUns
  * @source https://github.com/riolubruh/YABDP4Nitro
  * @donate https://github.com/riolubruh/YABDP4Nitro?tab=readme-ov-file#donate
@@ -38,7 +38,7 @@
 */
 
 //#region Module Hell
-const {Webpack,Patcher,Net,React,UI,Logger,Data,Components,DOM,Plugins} = BdApi;
+const {Webpack,Patcher,Net,React,UI,Logger,Data,Components,DOM,Plugins,ContextMenu} = BdApi;
 const StreamButtons = Webpack.getMangled("RESOLUTION_1080",{
     ApplicationStreamFPS: Webpack.Filters.byKeys("FPS_30"),
     ApplicationStreamFPSButtons: o => Array.isArray(o) && typeof o[0]?.label === 'number' && o[0]?.value === 15,
@@ -55,7 +55,6 @@ const [
     UserStore,
     getBannerURLMod,
     UserProfileStore,
-    buttonClassModule,
     Dispatcher,
     AvatarDefaults,
     LadderModule,
@@ -75,7 +74,6 @@ const [
     SoundboardStore,
     EmojiStore,
     isEmojiAvailableMod,
-    TextClasses,
     videoOptionFunctions,
     addFilesMod,
     RegularAppIcon,
@@ -93,12 +91,16 @@ const [
     CanUserUseMod,
     loadMP4Box,
     ProfileEffectStore,
-    DMTag
+    DMTag,
+    GIFPickerRender,
+    DiscordCopyToClipboardFn,
+    ContextMenuSlider,
+    VideoStream,
+    PictureInPicturePlayer
 ] = Webpack.getBulk(
     {filter: Webpack.Filters.byStoreName('UserStore')},
     {filter: Webpack.Filters.byPrototypeKeys('getBannerURL')},
     {filter: Webpack.Filters.byStoreName('UserProfileStore')},
-    {filter: Webpack.Filters.byKeys("lookFilled","button","contents")}, //buttonClassModule
     {filter: Webpack.Filters.byKeys("subscribe","dispatch")}, 
     {filter: Webpack.Filters.byKeys("getEmojiURL")}, //AvatarDefaults
     {filter: Webpack.Filters.byKeys("calculateLadder"), searchExports: true},
@@ -118,7 +120,6 @@ const [
     {filter: Webpack.Filters.byStoreName('SoundboardStore')},
     {filter: Webpack.Filters.byStoreName('EmojiStore')},
     {filter: Webpack.Filters.byKeys("isEmojiFilteredOrLocked")},
-    {filter: Webpack.Filters.byKeys("errorMessage","h5")},
     {filter: Webpack.Filters.byPrototypeKeys("updateVideoQuality")},
     {filter: Webpack.Filters.byKeys("addFiles")},
     {filter: Webpack.Filters.byStrings('M19.73 4.87a18.2'), searchExports: true}, //RegularAppIcon
@@ -126,7 +127,7 @@ const [
     {filter: Webpack.Filters.byStrings('.iconSource,width:')}, //CustomAppIcon
     {filter: Webpack.Filters.byStoreName('ClipsStore')},
     {filter: Webpack.Filters.byStoreName('UserSettingsAccountStore')},
-    {filter: Webpack.Filters.byStrings('nameplate', 'nameplateData', 'nameplatePreview', 'nameplatePurchased')}, //NameplatePreview
+    {filter: Webpack.Filters.bySource('nameplateData', 'isPurchased')}, //NameplatePreview
     {filter: Webpack.Filters.byPrototypeKeys("uploadFileToCloud"), searchExports: true},
     {filter: Webpack.Filters.bySource(".SEND_FAILED,"), defaultExport: false}, //messageRenderMod
     {filter: Webpack.Filters.bySource("preset)&&","resolution&&","fps&&")}, //InvalidStreamSettingsModal
@@ -136,7 +137,12 @@ const [
     {filter: Webpack.Filters.bySource(".getFeatureValue("), defaultExport: false}, //CanUserUseMod
     {filter: Webpack.Filters.byStrings("mp4boxInputFile.boxes")}, //load MP4Box
     {filter: Webpack.Filters.byStoreName('ProfileEffectStore')},
-    {filter: Webpack.Filters.bySource('NOT_STAFF_WARNING', 'botTagNotStaffWarning')}
+    {filter: Webpack.Filters.bySource('NOT_STAFF_WARNING', 'botTagNotStaffWarning')},
+    {filter: Webpack.Filters.byPrototypeKeys('renderGIF'), searchExports:true},
+    {filter: Webpack.Filters.byStrings('navigator.clipboard.write'), searchExports:true},
+    {filter: Webpack.Filters.byStrings('initialValue', 'label', 'sortedMarkers'), searchExports: true},
+    {filter: Webpack.Filters.bySource('VideoStream', 'videoComponent')},
+    {filter: Webpack.Filters.bySource('PictureInPicturePlayer')}
 );
 const messageRender = Object.values(messageRenderMod).find(o => typeof o === "object");
 const stickerSendabilityModule = Webpack.getMangled("SENDABLE_WITH_BOOSTED_GUILD",{
@@ -160,6 +166,10 @@ const ORIGINAL_NITRO_STATUS = CurrentUser.premiumType;
 
 //clips related variables
 let ffmpeg, udta, udtaBuffer, crcTable, clipMaBuffer;
+
+//for fixing edit cancels
+let lastEditedMsg;
+let lastEditedMsgCopy;
 
 const defaultSettings = {
     "emojiSize": 64,
@@ -212,7 +222,10 @@ const defaultSettings = {
     "nameplatesEnabled": true,
     "clipTimestamp": 2,
     "removeNotStaffWarning": true,
-    "editMessageWithEmoji": true
+    "editMessageWithEmoji": true,
+    "extraContextMenus": true,
+    "userSharpenPreferences": {},
+    "sharpenStreams": false
 };
 const defaultData = {
     avatarDecorations: {},
@@ -227,6 +240,7 @@ let data = {};
 let badgeUserIDs = [];
 let fetchedUserBg = false;
 let fetchedUserPfp = false;
+let pluginThisRef; //fuck it
 
 // #region Config
 const config = {
@@ -237,20 +251,16 @@ const config = {
             "discord_id": "359063827091816448",
             "github_username": "riolubruh"
         }],
-        "version": "6.3.0",
-        "description": "Unlock all screensharing modes, and use cross-server & GIF emotes!",
+        "version": "6.5.1",
+        "description": "Unlock all screensharing modes, use cross-server & GIF emotes, and more!",
         "github": "https://github.com/riolubruh/YABDP4Nitro",
         "github_raw": "https://raw.githubusercontent.com/riolubruh/YABDP4Nitro/main/YABDP4Nitro.plugin.js"
     },
     changelog: [
         {
-            title: "6.3.0",
+            title: "6.5.1",
             items: [
-                "Changed it so that adding a heiphen before an emoji skips bypass for that emoji instead of a backslash since Discord added their own functionality for that scenario at some point.",
-                "Fixed static emojis not working since last update didn't implement the fix for emojis properly.",
-                "Made a small change to the updating system to hopefully reduce problems caused by it.",
-                "Fixed plugin not fetching all available Avatar Decorations and Nameplates.",
-                "Added new feature: editing messages with text-based fakemoji (i.e. not uploaded emojis) will show them as emoji instead of the actual text. On by default, it can be disabled under the \"Replace Fakemoji When Editing Message\" option."
+                "Fixed Nameplates UI not working on BetterDiscord Canary."
             ]
         }
     ],
@@ -280,7 +290,8 @@ const config = {
                     Allows you to change the voice bitrate to whatever you want. 
                     Does not allow you to go over the voice channel's set bitrate but it does allow you to go much lower. 
                     Bitrate in kbps. Disabled if this is set to -1.`, value: () => settings.voiceBitrate },
-                {
+                { type: "switch", id:"sharpenStreams", name:"Stream Sharpness", note:"Adds a slider to the right-click / context menu of streams that allows you to adjust the sharpness of screen shares. Saves and applies your sharpness amount per user, similar to stream volume. MAKE SURE HARDWARE ACCELERATION IS ENABLED UNDER DISCORD'S ADVANCED SETTINGS OR PERFORMANCE WILL SUFFER!!", value: () => settings.sharpenStreams},
+                { 
                     type: "dropdown", id: "videoCodec2", name: "Force Video Codec (Advanced Users Only)", note: `
                     Allows you to force a specified video codec to be used. Normally, Discord would automatically 
                     choose this based on your hardware, options in Voice & Video, and the viewers watching.
@@ -335,7 +346,7 @@ const config = {
                 { type: "switch", id: "uploadStickers", name: "Upload Stickers", note: "Upload stickers in the same way as emotes.", value: () => settings.uploadStickers },
                 { type: "switch", id: "forceStickersUnlocked", name: "Force Stickers Unlocked", note: "Enable to cause Stickers to be unlocked.", value: () => settings.forceStickersUnlocked },
                 { type: "switch", id: "fakeInlineVencordEmotes", name: "Fake Inline Hyperlink Emotes", note: "Makes hyperlinked emojis appear as if they were real emojis, inlined in the message, similar to Vencord FakeNitro emotes.", value: () => settings.fakeInlineVencordEmotes },
-                { type: "switch", id:"soundmojiEnabled", name: "Soundmoji Bypass", note: "Unlocks soundmojis and allows you to \"send\" them by automatically replacing them with a MP3 upload and some special text that will make them render as real soundmojis on the client side. Please note that this will enable Experiments.", value: () => settings.soundmojiEnabled }
+                { type: "switch", id: "soundmojiEnabled", name: "Soundmoji Bypass", note: "Unlocks soundmojis and allows you to \"send\" them by automatically replacing them with a MP3 upload and some special text that will make them render as real soundmojis on the client side. Please note that this will enable Experiments.", value: () => settings.soundmojiEnabled }
             ]
         },
         {
@@ -399,6 +410,7 @@ const config = {
                 { type: "switch", id: "removeScreenshareUpsell", name: "Remove Screen Share Nitro Upsell", note: "Removes the Nitro upsell in the Screen Share quality option menu.", value: () => settings.removeScreenshareUpsell },
                 { type: "switch", id: "unlockAppIcons", name: "App Icons", note: "Unlocks app icons.", value: () => settings.unlockAppIcons },
                 { type: "switch", id: "removeNotStaffWarning", name: "Remove Not Staff Warning", note: "Removes the \"NOT STAFF\" warning on DMs when Experiments are enabled.", value: () => settings.removeNotStaffWarning },
+                { type: "switch", id: "extraContextMenus", name: "Extra Context Menus and Options", note: "Adds a Copy URL and Open URL buttons to the context menu that appears when you right-click an Emoji or Sticker in the Expression Picker and adds a context menu that will appear with Copy Link and Open Link options when you right-click a GIF in the GIF picker.", value: () => settings.extraContextMenus},
                 { type: "switch", id: "experiments", name: "Experiments", note: "Unlocks experiments. Soundmoji and Enable Clips Experiments have to be disabled to turn this off. Use at your own risk.", value: () => (settings.experiments || settings.soundmojiEnabled || (settings.useClipBypass && settings.enableClipsExperiment))},
                 { type: "switch", id: "checkForUpdates", name: "Check for Updates", note: "Should the plugin check for updates on startup?", value: () => settings.checkForUpdates }
             ]
@@ -408,6 +420,49 @@ const config = {
     "main": "YABDP4Nitro.plugin.js"
 };
 // #endregion
+
+//#region Plugin-wide Function(s)
+
+function copyToClipboard(string, successMessage, errorMessage = "Failed to copy to clipboard!") {
+    try {
+        DiscordCopyToClipboardFn(string);
+        if(successMessage)
+            UI.showToast(successMessage,{type: "info"});
+    } catch(err) {
+        UI.showToast(errorMessage,{type: "error",forceShow: true});
+        Logger.error(this.meta.name,err);
+    }
+}
+
+function ResizeFindingElement({id, onResize}){
+    const ref = React.useRef(null);
+
+    React.useEffect(() => {
+        if(ref.current){
+            const observer = new ResizeObserver((ResizeObserverEntry) => {
+                if(ResizeObserverEntry?.[0]){
+                    onResize(ResizeObserverEntry[0].contentRect.width, ResizeObserverEntry[0].contentRect.height);
+                }
+            });
+            observer.observe(ref.current);
+    
+            return () => {
+                observer.disconnect();
+            };
+        }
+    },[]);
+
+    return React.createElement('div', {
+        id,
+        ref,
+        style: {
+            width: "100%",
+            height: "100%"
+        }
+    })
+}
+
+//#endregion
 
 // #region Exports
 module.exports = class YABDP4Nitro {
@@ -443,6 +498,9 @@ module.exports = class YABDP4Nitro {
 
     // #region Save and Update
     saveAndUpdate(){ //Saves and updates settings and runs functions
+
+        ContextMenu.unpatch('expression-picker', this.expressionPickerFunction);
+        ContextMenu.unpatch('stream-context', this.streamContextPatch);
 
         controller.abort();
         controller = new AbortController();
@@ -753,11 +811,312 @@ module.exports = class YABDP4Nitro {
             Logger.error(this.meta.name, err);
         }
 
+        if(settings.extraContextMenus){
+            this.extraContextMenus();
+        }
+
+        if(settings.sharpenStreams){
+            try{
+                this.sharpenStreams();
+            }catch(err){
+                Logger.error(this.meta.name, err);
+            }
+        }
+
     } //End of saveAndUpdate()
     // #endregion
 
+    //Adds sharpness slider to stream context menu, and applies sharpness effect to stream tiles and PIP player. Shoutouts to @me4u._.day for their suggestion. 
+    sharpenStreams(){ 
+        let videoStreamName = this.findMangledName(VideoStream, x=>x.type?.toString?.().includes?.('VideoStream'));
+        if(videoStreamName){
+            Patcher.after(this.meta.name, VideoStream[videoStreamName], "type", (_,[args],ret) => {
+                if(args?.userId){
+                    let percentNormal = 100;
+                    let percentSharpened = 0;
+    
+                    if(settings.userSharpenPreferences?.[args.userId]){
+                        percentSharpened = settings.userSharpenPreferences[args.userId]; 
+                        percentNormal = 100 - percentSharpened;
+                    }
+    
+                    ret.props.children.push(React.createElement('svg',{
+                        children: React.createElement("filter",{
+                            id: "yabd-svgSharpen-" + args.userId,
+                            colorInterpolationFilters: "sRGB",
+                            children: [
+                                React.createElement('feConvolveMatrix',{
+                                    order: "3",
+                                    kernelMatrix: "0 -1 0 -1 5 -1 0 -1 0",
+                                    result: "sharpen"
+                                }),
+                                React.createElement('feComposite',{
+                                    in: "SourceGraphic",
+                                    in2: "sharpen",
+                                    operator: "arithmetic",
+                                    result: "userPreference",
+                                    k1: "0",k2: (percentNormal / 100),k3: (percentSharpened / 100),k4: "0"
+                                }),
+                                React.createElement('feComposite',{
+                                    id: `yabd-svgSharpen-${args.userId}-size`,
+                                    in: "SourceGraphic",
+                                    in2: "userPreference",
+                                    operator: "arithmetic",
+                                    k1: "0",k2: "1",k3: "0",k4: "0" //default to not changing anything but we change these values below
+                                })
+                            ]
+                        })
+                    }));
+    
+                    //I could have made this part work a bit better, but I don't feel like it right now honestly.
+                    ret.props.children.push(React.createElement(ResizeFindingElement, {
+                        id: `yabd-sharpen-resize-div-${args.userId}`,
+                        onResize: (width, height) => {
+                            //get the part of the filter that compares the user preference to the source graphic
+                            const sizeOfStreamFilter = document.getElementById(`yabd-svgSharpen-${args.userId}-size`);
+    
+                            //calculate tile's percentage of the screen
+                            let heightOfStreamComparedToScreen = height / screen.height;
+    
+                            //if the user is focusing the stream and Discord is the maximized window, then this multiplication should get them to the full intensity
+                            //(ensures that the intensity isn't always less than 100%)
+                            let filterIntensityFactoringScreen = heightOfStreamComparedToScreen * 1.3;
+                            if(filterIntensityFactoringScreen > 1) filterIntensityFactoringScreen = 1; //normalize value so it cant go over 100%
+                            
+                            //apply new values 
+                            sizeOfStreamFilter.k3.baseVal = filterIntensityFactoringScreen.toString();
+                            sizeOfStreamFilter.k2.baseVal = (1 - filterIntensityFactoringScreen).toString();
+                        } 
+                    }))
+    
+                    if(ret?.props?.children?.[0]?.props)
+                        ret.props.children[0].props.style = {filter: `url(#yabd-svgSharpen-${args.userId})`};
+                }
+            });
+        }
+
+        ContextMenu.patch('stream-context', this.streamContextPatch);
+
+        if(PictureInPicturePlayer){
+            let pipPlayerName = this.findMangledName(PictureInPicturePlayer, x=>x);
+            if(pipPlayerName){
+                Patcher.after(this.meta.name,PictureInPicturePlayer,pipPlayerName,(_,[args],ret) => {
+        
+                    const userId = args?.backgroundKey?.split?.(":")?.[3];
+        
+                    if(userId){
+        
+                        if(userId != CurrentUser.id){
+                            let sharpnessPercent = 0;
+            
+                            if(settings.userSharpenPreferences?.[userId]) {
+                                sharpnessPercent = settings.userSharpenPreferences[userId];
+                            }
+                            let normalPercent = 100 - sharpnessPercent;
+        
+                            // This is to change the intensity when the user changes the size of the PIP window.
+                            // It only updates after they stop dragging the mouse, but it's not that big of a deal,
+                            // since I doubt most people will even notice unless they're really paying attention, and I don't feel like changing it now
+                            // PIP window is always at most 50% of the screen, so we take width of the PIP window and divide by the width of the screen
+                            // to get the approximate percent of the screen that is covered by the stream
+                            let widthOfStreamComparedToScreen = args.width / screen.width;
+        
+                            let filterIntensityFactoringScreen;
+                            filterIntensityFactoringScreen = widthOfStreamComparedToScreen * 2; //then we double that since it's at most 50% of the screen
+                            if(filterIntensityFactoringScreen > 1) filterIntensityFactoringScreen = 1; //and normalize it to at most 1
+                            //and then we use this value to determine how much to sharpen the PIP window after the user's preference is considered in the second feComposite
+            
+                            ret.props.children.push(React.createElement('svg',{
+                                children: [
+                                    React.createElement("filter",{
+                                        id: "yabd-svgSharpen-" + userId + "-pip",
+                                        colorInterpolationFilters: "sRGB",
+                                        children: [
+                                            React.createElement('feConvolveMatrix',{
+                                                order: "3",
+                                                kernelMatrix: "0 -0.5 0 -0.5 3 -0.5 0 -0.5 0", //weaker kernel than the CallTiles since the PIP is always smaller than them and we want them to be fairly close in perceived sharpness
+                                                result: "sharpen"
+                                            }),
+                                            React.createElement('feComposite',{
+                                                in: "SourceGraphic",
+                                                in2: "sharpen",
+                                                operator: "arithmetic",
+                                                k1: "0",k2: (normalPercent / 100),k3: (sharpnessPercent / 100),k4: "0",
+                                                result: "userPreference"
+                                            }),
+                                            React.createElement('feComposite',{
+                                                in: "SourceGraphic",
+                                                in2: "userPreference",
+                                                operator: "arithmetic",
+                                                k1: "0",k2: (1 - filterIntensityFactoringScreen),k3: filterIntensityFactoringScreen,k4: "0"
+                                            })
+                                        ]
+                                    })
+                                ]
+                            }));
+        
+                            ret.props.style = {filter: `url(#yabd-svgSharpen-${userId}-pip)`};
+                        }
+                    }
+                });
+            }
+        }else{
+            Logger.error(this.meta.name, "PictureInPicturePlayer not found!");
+        }
+    }
+
+    streamContextPatch(reactElem,context) {
+        if(!settings.sharpenStreams) return;
+
+        if(reactElem?.props?.children?.props?.children?.[1]?.props?.children?.[0]?.props?.id == "mute"){ //Makes the sharpness slider only appear on other user's stream while you are watching it
+            let userId = context.stream.ownerId;
+
+            if(userId){
+                let initialValue = 0;
+    
+                if(settings.userSharpenPreferences?.[userId]) {
+                    initialValue = settings.userSharpenPreferences[userId];
+                }
+    
+                const handleChange = (e) => {
+                    let percentSharpness = parseInt(e);
+                    let percentNormal = 100 - percentSharpness;
+    
+                    let filter = document.getElementById(`yabd-svgSharpen-${userId}`);
+                    if(filter){
+                        settings.userSharpenPreferences[userId] = percentSharpness;
+                        let feComposite = filter?.children[1];
+                        feComposite.k3.baseVal = (percentSharpness / 100).toString();
+                        feComposite.k2.baseVal = (percentNormal / 100).toString();
+                    }
+                }
+    
+                const handleSave = () => {
+                    Data.save(pluginThisRef.meta.name, "settings", settings);
+                }
+    
+                reactElem.props.children.props.children.splice(2,0,
+                    React.createElement(ContextMenu.Item,
+                        {
+                            id: "yabd-sharpness-slider",
+                            label: () => React.createElement(ContextMenuSlider,{
+                                initialValue,
+                                label: React.createElement(Components.Text, { //Default label is the wrong size so this uses the text component lol
+                                    children: "Sharpness",
+                                    style: {
+                                        fontSize: "14px",
+                                        fontWeight: "var(--font-weight-medium)"
+                                    }
+                                }),
+                                asValueChanges: handleChange,
+                                onValueChange: handleSave
+                            })
+                        }
+                    )
+                )   
+            }
+        }
+    }
+
+    extraContextMenus(){
+        try{
+            ContextMenu.patch('expression-picker', this.expressionPickerFunction);
+        }catch(err){
+            Logger.error(this.meta.name, err);
+        }
+
+        try{
+            if(GIFPickerRender){
+                Patcher.after(this.meta.name, GIFPickerRender?.prototype, "render", (thisRef, __, ret) => {
+                    if(ret?.props){
+                        ret.props.onContextMenu = (e) => {
+                            let url;
+                            if(thisRef?.props?.item?.url)
+                                url = thisRef.props.item.url;
+                            else
+                                url = thisRef.props.src;
+        
+                            if(url.startsWith('//')){
+                                url = "https:" + url;
+                            }
+        
+                            ContextMenu.open(e, ContextMenu.buildMenu([{
+                                type: "text",
+                                label: "Copy Link",
+                                onClick: () => {
+                                    copyToClipboard(url);
+                                }
+                            },{
+                                type:"text",
+                                label: "Open Link",
+                                onClick: () => {
+                                    window.open(url);
+                                }
+                            }]))
+                        }
+                    }
+                });
+            }else{
+                Logger.error(this.meta.name, "GIF Picker element was not found!");
+            }
+        }catch(err){
+            Logger.error(this.meta.name, err);
+        }
+    }
+
+    //GIF and Sticker Picker Context Menu
+    expressionPickerFunction(reactElem, context) {
+        //those variable names arent good but idk what else to call em lol
+
+        let src = context?.target?.src ? context?.target?.src : context?.target?.firstChild?.src;
+        if(src) {
+            if(src.includes('emojis')){
+                let idFromUrlRegex = /(?<=emojis\/)(\d+?)(?=\.(png|webp|gif|avif|jpg|jpeg))/;
+                let emojiId = src.match(idFromUrlRegex)[0];
+                if(emojiId){
+                    let emoji = EmojiStore.getCustomEmojiById(emojiId);
+                    if(emoji){
+                        if(!emoji.animated && settings.PNGemote)
+                            src = src.replace('.webp', '.png');
+                        if(emoji.animated){
+                            src = src.replace('.webp', '.gif');
+                            src = src.replace('.avif', '.gif');
+                        }    
+                    } 
+                }
+            }
+
+            src = src.split('?')[0] + "?size=4096";
+
+            try {
+                if(reactElem?.props?.children?.props?.children){
+                    reactElem.props.children.props.children.push(
+                        ContextMenu.buildItem({
+                            id: "yabd-copy-url-expression-picker",
+                            label: "Copy URL",
+                            action: () => {
+                                copyToClipboard(src);
+                            }
+                        })
+                    );
+                    reactElem.props.children.props.children.push(
+                        ContextMenu.buildItem({
+                            id: "yabd-open-url-expression-picker",
+                            label: "Open URL",
+                            action: () => {
+                                window.open(src);
+                            }
+                        })
+                    )
+                }
+            } catch(err) {
+                Logger.error(this.meta.name,err);
+            }
+        }
+    }
+
     async patchGoLiveModalUpsells() {
-        DOM.addStyle(this.meta.name, `
+        DOM.addStyle("YABDP4NitroRemoveUpsell", `
             [class*="upsellBanner"], [class*="reverseTrialEducationBannerContainer"] {
                 display: none;
                 visibility: hidden;
@@ -856,7 +1215,7 @@ module.exports = class YABDP4Nitro {
             //if user has a nameplate
             if(userNameplate) {
                 //filter out bad or existing nameplate
-                if(userNameplate.sku_id != 0 && userNameplate.sku_id != undefined && userNameplate.sku_id != null && data.nameplatesV2[userNameplate.skuId] == undefined) {
+                if(userNameplate.sku_id != 0 && userNameplate.sku_id != undefined && userNameplate.sku_id != null && data?.nameplatesV2?.[userNameplate.skuId] == undefined) {
                     //get shortened asset name
                     let nameplateAsset = userNameplate.asset.replace('nameplates/','').replaceAll('/','');
                     //create name for nameplate since it's not provided through getUser
@@ -906,102 +1265,108 @@ module.exports = class YABDP4Nitro {
         });
 
         const secondsightifyEncodeOnly = this.secondsightifyEncodeOnly;
-        
+
         //#region Nameplates UI
-        function NameplateList(){
+        function NameplateList({NameplatePreviewName}){
             let [query, setQuery] = React.useState("");
 
             let nameplatesList = [];
 
-            if(!data?.nameplatesV2 || data?.nameplatesV2?.length < 1){
-                return React.createElement('h1', {
-                    children: "No nameplates were found!",
+            if(NameplatePreview){
+                if(!data?.nameplatesV2 || data?.nameplatesV2?.length < 1){
+                    return React.createElement('h1', {
+                        children: "No nameplates were found!",
+                        style: {
+                            color: "red",
+                            fontWeight: "bold"
+                        }
+                    });
+                } else{
+                    const listOfNameplates = Object.values(data.nameplatesV2);
+                    for(let i = 0; i < listOfNameplates.length; i++){
+                        let nameplate = listOfNameplates[i];
+                        if(nameplate) {
+                            if(query != "" && !nameplate.name.toLowerCase().includes(query.toLowerCase())){
+                                continue;
+                            }
+                            nameplatesList.push(React.createElement('div',{
+                                children: React.createElement(NameplatePreview[NameplatePreviewName].type,{
+                                    user: CurrentUser,
+                                    isHighlighted: true,
+                                    nameplate: {
+                                        asset: `nameplates/${nameplate.asset}`,
+                                        palette: nameplate.palette,
+                                        type: 2,
+                                        label: nameplate.label
+                                    },
+                                    isPurchased: true
+                                }),
+                                style: {
+                                    borderRadius: "10px",
+                                    width: "95%",
+                                    marginLeft: "auto",
+                                    marginRight: "auto",
+                                    height: "42px",
+                                    marginTop: "10px",
+                                    position: "relative",
+                                    top: '5px',
+                                    cursor: "pointer",
+                                },
+                                onClick: () => {
+                                    //make 3y3 string
+                                    let strToEncode = `n{${nameplate.asset},${nameplate.palette}}`;
+                                    let encodedStr = secondsightifyEncodeOnly(strToEncode);
+    
+                                    copyToClipboard(" " + encodedStr,"3y3 copied to clipboard!","Failed to copy to clipboard!")
+                                },
+                                title: nameplate.name
+                            }));
+                        }
+                    }
+                    return React.createElement('div', {
+                        children: [
+                            React.createElement(Components.TextInput, {
+                                value: query,
+                                placeholder: "Search...",
+                                onChange: (input) => setQuery(input)
+                            }),
+                            React.createElement('br'),
+                            React.createElement('div', {
+                                children: nameplatesList
+                            })
+                        ],
+                    });
+                }
+            }else{
+                return React.createElement('h1',{
+                    children: "Error: Nameplate Preview element is undefined!",
                     style: {
                         color: "red",
                         fontWeight: "bold"
                     }
                 });
-            } else{
-                const listOfNameplatesBySku = Object.keys(data.nameplatesV2);
-                for(let i = 0; i < listOfNameplatesBySku.length; i++){
-                    let sku = listOfNameplatesBySku[i];
-                    let nameplate = data.nameplatesV2[sku];
-                    if(query != "" && !nameplate.name.toLowerCase().includes(query.toLowerCase())){
-                        continue;
-                    }
-
-                    nameplatesList.push(React.createElement('div', {
-                        children: React.createElement(NameplatePreview, {
-                            user: CurrentUser,
-                            isHighlighted: true,
-                            nameplate: {
-                                asset: `nameplates/${nameplate.asset}`,
-                                palette: nameplate.palette,
-                                type: 2,
-                                label: nameplate.label
-                            },
-                            isPurchased: true
-                        }),
-                        style: {
-                            borderRadius: "10px",
-                            width: "95%",
-                            marginLeft: "auto",
-                            marginRight: "auto",
-                            height: "42px",
-                            marginTop: "10px",
-                            position: "relative",
-                            top: '5px',
-                            cursor: "pointer",
-                        },
-                        onClick: () => {
-                            //make 3y3 string
-                            let strToEncode = `n{${nameplate.asset},${nameplate.palette}}`;
-                            let encodedStr = secondsightifyEncodeOnly(strToEncode);
-
-                            //copy to clipboard
-                            try{
-                                DiscordNative.clipboard.copy(" " + encodedStr);
-                                UI.showToast("3y3 copied to clipboard!", { type: "info" });    
-                            }catch(err){
-                                UI.showToast("Failed to copy to clipboard!", { type: "error", forceShow: true });
-                                Logger.error("YABDP4Nitro", err);
-                            }
-                        },
-                        title: nameplate.name
-                    }));
-                }
-                return React.createElement('div', {
-                    children: [
-                        React.createElement(Components.TextInput, {
-                            value: query,
-                            placeholder: "Search...",
-                            onChange: (input) => setQuery(input)
-                        }),
-                        React.createElement('br'),
-                        React.createElement('div', {
-                            children: nameplatesList
-                        })
-                    ],
-                });
             }
         }
- 
         let NameplateSection = this.findMangledName(NameplateSectionMod, x=>x, "NameplateSection");
         if(!NameplateSection) return;
 
+        const NameplatePreviewName = this.findMangledName(NameplatePreview, x=>x)
+
         Patcher.after(this.meta.name, NameplateSectionMod, NameplateSection, (_, args, ret) => {
-            const ButtonsSection = ret.props.children.props.children;
-            ButtonsSection.push(React.createElement("button",{
-                className: `${buttonClassModule.button} ${buttonClassModule.lookFilled} ${buttonClassModule.colorBrand} ${buttonClassModule.sizeSmall} ${buttonClassModule.grow}`,
-                style: {
-                    marginLeft: "10px",
-                    whiteSpace: "nowrap"
-                },
-                children: "Change Nameplate [YABDP4Nitro]",
-                onClick: () => {
-                    UI.showConfirmationModal("Change Nameplate", React.createElement(NameplateList), {cancelText: ""})
-                }
-            }))
+            const ButtonsSection = ret?.props?.children?.props?.children;
+            if(ButtonsSection){
+                ButtonsSection.push(React.createElement("button",{
+                    className: `yabd-generic-button`,
+                    style: {
+                        marginLeft: "10px",
+                        whiteSpace: "nowrap"
+                    },
+                    children: "Change Nameplate [YABDP4Nitro]",
+                    onClick: () => {
+                        UI.showConfirmationModal("Change Nameplate", React.createElement(NameplateList, {NameplatePreviewName}), {cancelText: ""})
+                    }
+                }))
+            }
         });
         //#endregion
     }
@@ -1011,9 +1376,6 @@ module.exports = class YABDP4Nitro {
     async resolutionSwapper(){
         if(!this.StreamSettingsPanelMod) 
             this.StreamSettingsPanelMod = await Webpack.waitForModule(Webpack.Filters.byStrings("StreamSettings: user cannot be undefined"), {defaultExport:false, signal: controller.signal});
-
-        if(!this.FormModalClasses) 
-            this.FormModalClasses = Webpack.getByKeys("formItemTitleSlim", "modalContent");
         
         let GoLiveModal = this.findMangledName(this.StreamSettingsPanelMod, Webpack.Filters.byStrings("StreamSettings"), "GoLiveModal");
         if(!GoLiveModal) return;
@@ -1040,7 +1402,7 @@ module.exports = class YABDP4Nitro {
                             children: [
                                 React.createElement("h1", {
                                     children: "CUSTOM RESOLUTION",
-                                    className: `${TextClasses.h5} ${TextClasses.eyebrow} ${this.FormModalClasses.formItemTitleSlim}`
+                                    className: "yabd-text-h5"
                                 }),
                                 React.createElement(Components.NumberInput, {
                                     value: settings.CustomResolution,
@@ -1074,7 +1436,7 @@ module.exports = class YABDP4Nitro {
                             children: [
                                 React.createElement("h1", {
                                     children: "CUSTOM FRAME RATE",
-                                    className: `${TextClasses.h5} ${TextClasses.eyebrow} ${this.FormModalClasses.formItemTitleSlim}`
+                                    className: `yabd-text-h5`
                                 }),
                                 React.createElement(Components.NumberInput, {
                                     value: settings.CustomFPS,
@@ -1118,21 +1480,21 @@ module.exports = class YABDP4Nitro {
                                             style: {
                                                 marginBlock: "0 5px",
                                             },
-                                            className: `${TextClasses.h5} ${TextClasses.eyebrow} ${this.FormModalClasses.formItemTitleSlim}`
+                                            className: `yabd-text-h5`
                                         }),
                                         React.createElement("h1", {
                                             children: "TARGET",
                                             style: {
                                                 marginBlock: "0 5px",
                                             },
-                                            className: `${TextClasses.h5} ${TextClasses.eyebrow} ${this.FormModalClasses.formItemTitleSlim}`
+                                            className: `yabd-text-h5`
                                         }),
                                         React.createElement("h1", {
                                             children: "MAX",
                                             style: {
                                                 marginBlock: "0 5px",
                                             },
-                                            className: `${TextClasses.h5} ${TextClasses.eyebrow} ${this.FormModalClasses.formItemTitleSlim}`
+                                            className: `yabd-text-h5`
                                         }),
                                     ]
                                 }),
@@ -1193,8 +1555,6 @@ module.exports = class YABDP4Nitro {
         //wait for lazy loaded modules
         if(this.GoLiveV2ModalMod == undefined) this.GoLiveV2ModalMod = await Webpack.waitForModule(Webpack.Filters.byStrings("GoLiveModalV2"), {defaultExport:false, signal: controller.signal});
 
-        if(this.StreamOptionsButtonClassesMod == undefined) this.StreamOptionsButtonClassesMod = await Webpack.waitForModule(Webpack.Filters.byKeys("streamOptionsButton", "settingsIcon"), {signal: controller.signal});
-
         //the sign of janky code inbound
         let GLMV2Opt = {
             resolutionToSet: undefined,
@@ -1225,11 +1585,7 @@ module.exports = class YABDP4Nitro {
             
             if(RightButtonGroup) {
                 RightButtonGroup.splice(2,0,React.createElement("button",{
-                    class: `${this.StreamOptionsButtonClassesMod.streamOptionsButton} ${buttonClassModule.button} ${buttonClassModule.lookFilled} ${buttonClassModule.colorPrimary} ${buttonClassModule.sizeIcon} ${buttonClassModule.grow}`,
-                    style: {
-                        height: "46px",
-                        width: "46px"
-                    },
+                    class: "yabd-resolution-swapper-v2-button",
                     children: 'YABD',
                     onClick: () => {
                         let localStreamOptions = {
@@ -1261,11 +1617,11 @@ module.exports = class YABDP4Nitro {
                                         children: [
                                             React.createElement("h1",{
                                                 children: "Resolution",
-                                                className: `${TextClasses.h5} ${TextClasses.eyebrow} ${this.FormModalClasses.formItemTitleSlim}`
+                                                className: `yabd-text-h5`
                                             }),
                                             React.createElement("h1",{
                                                 children: "FPS",
-                                                className: `${TextClasses.h5} ${TextClasses.eyebrow} ${this.FormModalClasses.formItemTitleSlim}`
+                                                className: `yabd-text-h5`
                                             }),
                                         ]
                                     }),
@@ -1303,7 +1659,7 @@ module.exports = class YABDP4Nitro {
                             settings.CustomBitrateEnabled ? React.createElement("br") : undefined,
                             settings.CustomBitrateEnabled ? React.createElement("h1",{
                                 children: "Custom Bitrate (kbps)",
-                                className: `${TextClasses.h5} ${TextClasses.eyebrow} ${this.FormModalClasses.formItemTitleSlim}`
+                                className: `yabd-text-h5`
                             }) : undefined,
                             settings.CustomBitrateEnabled ? React.createElement('div', {
                                 style: {
@@ -1317,21 +1673,21 @@ module.exports = class YABDP4Nitro {
                                         style: {
                                             marginBlock: "0 5px",
                                         },
-                                        className: `${TextClasses.h5} ${TextClasses.eyebrow} ${this.FormModalClasses.formItemTitleSlim}`
+                                        className: `yabd-text-h5`
                                     }),
                                     React.createElement("h1", {
                                         children: "Target",
                                         style: {
                                             marginBlock: "0 5px",
                                         },
-                                        className: `${TextClasses.h5} ${TextClasses.eyebrow} ${this.FormModalClasses.formItemTitleSlim}`
+                                        className: `yabd-text-h5`
                                     }),
                                     React.createElement("h1", {
                                         children: "Max",
                                         style: {
                                             marginBlock: "0 5px",
                                         },
-                                        className: `${TextClasses.h5} ${TextClasses.eyebrow} ${this.FormModalClasses.formItemTitleSlim}`
+                                        className: `yabd-text-h5`
                                     }),
                                 ]
                             }) : undefined,
@@ -1663,12 +2019,12 @@ module.exports = class YABDP4Nitro {
 
                         let outFileName = "output.mp4";
 
-                        if(['audio/wav', 'audio/aiff', 'audio/x-ms-wma'].includes(currentFile.file.type)){
+                        if(['audio/wav', 'audio/aiff', 'audio/x-ms-wma', 'audio/mpeg'].includes(currentFile.file.type)){
                             Logger.info("YABDP4Nitro", 'Using MOV format for audio clip.');
                             outFileName = 'output.mov';
                         }
                         if(currentFile.file.type == 'audio/vnd.dolby.dd-raw'){
-                            UI.showToast("AC3 should send but playback is not supported!", {type: "warn"});
+                            UI.showToast("AC3 will send but playback is only supported on mobile!", {type: "warn"});
                         }
 
                         let array1 = ArrayBuffer.concat(await ffmpegAudioTransmux(arrayBuffer, currentFile.file.name, outFileName), udtaBuffer);
@@ -1889,7 +2245,7 @@ module.exports = class YABDP4Nitro {
                 else blobUrl = URL.createObjectURL(await (await fetchAndRetryWithNetFetch(filename)).blob());
                 return blobUrl;
             }catch(err){
-                Logger.error(this.meta.name, "An error occurred while fetching " + filename);
+                Logger.error("YABDP4Nitro", "An error occurred while fetching " + filename);
                 throw err;
             }
         }
@@ -2016,7 +2372,7 @@ module.exports = class YABDP4Nitro {
                     settings.lastGradientSettingStore = -1;
     
                     //save any changes to settings
-                    Data.save(this.meta.name, "settings", this.settings);
+                    Data.save(this.meta.name, "settings", settings);
                     
                     //dispatch settings update to change themes
                     Dispatcher.dispatch({
@@ -2038,7 +2394,7 @@ module.exports = class YABDP4Nitro {
                     settings.lastGradientSettingStore = args.backgroundGradientPresetId;
                     
                     //save any changes to settings
-                    Data.save(this.meta.name, "settings", this.settings);
+                    Data.save(this.meta.name, "settings", settings);
     
                     //dispatch settings update event to change to the gradient the user chose
                     Dispatcher.dispatch({
@@ -2192,7 +2548,7 @@ module.exports = class YABDP4Nitro {
             ret.props.children.props.children.push(
                 React.createElement("button", {
                     children: "Copy PFP 3y3",
-                    className: `${buttonClassModule.button} ${buttonClassModule.lookFilled} ${buttonClassModule.colorBrand} ${buttonClassModule.sizeSmall} ${buttonClassModule.grow}`,
+                    className: `yabd-generic-button`,
                     id: "profilePictureButton",
                     style: {
                         marginLeft: "10px",
@@ -2265,14 +2621,8 @@ module.exports = class YABDP4Nitro {
                         //if somehow none of the previous code ran, this is the last protection against an error. If this runs, something has probably gone horribly wrong.
                         if(encodedStr == "") return;
 
-                        //copy to clipboard
-                        try{
-                            DiscordNative.clipboard.copy(encodedStr);
-                            UI.showToast("3y3 copied to clipboard!", { type: "info" });    
-                        }catch(err){
-                            UI.showToast("Failed to copy to clipboard!", { type: "error", forceShow: true });   
-                            Logger.error("YABDP4Nitro", err);
-                        }
+                        copyToClipboard(encodedStr, "3y3 copied to clipboard!", "Failed to copy to clipboard!");
+
                     } //end copy pfp 3y3 click event
                 }) //end of react createElement
             ); //end of element push
@@ -2414,11 +2764,6 @@ module.exports = class YABDP4Nitro {
             this.profileEffects = ProfileEffectStore.getAllProfileEffects();
         }
 
-        let profileEffectIdList = new Array();
-        for(let i = 0; i < this.profileEffects.length; i++){
-            profileEffectIdList.push(this.profileEffects[i].id);
-        }
-
 
         Patcher.after(this.meta.name, UserProfileStore, "getUserProfile", (_, [args], ret) => {
             //error prevention
@@ -2445,7 +2790,7 @@ module.exports = class YABDP4Nitro {
                     //ignore invalid data 
                     if(isNaN(effectIndex)) return;
                     //ignore if the profile effect id does not point to an actual profile effect
-                    if(profileEffectIdList[effectIndex] == undefined) return;
+                    if(this.profileEffects[effectIndex] == undefined) return;
                     
                     //get profile effect
                     const effect = this.profileEffects[effectIndex];
@@ -2467,7 +2812,7 @@ module.exports = class YABDP4Nitro {
 
         //wait for profile effect section renderer to be loaded and store
         if(!this.profileEffectSectionRenderer)
-            this.profileEffectSectionRenderer = await Webpack.waitForModule(Webpack.Filters.byStrings("isTryItOutFlow:","=!1,initialSelectedEffectId"), {defaultExport:false, signal: controller.signal});
+            this.profileEffectSectionRenderer = await Webpack.waitForModule(Webpack.Filters.byStrings("isTryItOutFlow:","initialSelectedEffect"), {defaultExport:false, signal: controller.signal});
 
         let ProfileEffectSectionFnName = this.findMangledName(this.profileEffectSectionRenderer, x=>x, "ProfileEffectSection");
         if(!ProfileEffectSectionFnName) return;
@@ -2501,13 +2846,7 @@ module.exports = class YABDP4Nitro {
                     let encodedStr = secondsightifyEncodeOnly("/fx" + i); //fx0, fx1, etc.
                     //javascript that runs onclick for each profile effect button
                     let copyDecoration3y3 = function(){
-                        try{
-                            DiscordNative.clipboard.copy(" " + encodedStr);
-                            UI.showToast("3y3 copied to clipboard!", { type: "info" });    
-                        }catch(err){
-                            UI.showToast("Failed to copy to clipboard!", { type: "error", forceShow: true });   
-                            Logger.error("YABDP4Nitro", err);
-                        }
+                        copyToClipboard(" " + encodedStr, "3y3 copied to clipboard!", "Failed to copy to clipboard!");
                     };
 
                     profileEffectChildren.push(
@@ -2573,7 +2912,7 @@ module.exports = class YABDP4Nitro {
                 //self explanatory create react element
                 React.createElement("button", {
                     children: "Change Effect [YABDP4Nitro]",
-                    className: `${buttonClassModule.button} ${buttonClassModule.lookFilled} ${buttonClassModule.colorBrand} ${buttonClassModule.sizeSmall} ${buttonClassModule.grow}`,
+                    className: `yabd-generic-button`,
                     size: "bd-button-small",
                     id: "changeProfileEffectButton",
                     style: {
@@ -2708,7 +3047,7 @@ module.exports = class YABDP4Nitro {
                         borderRadius: "3px",
                         marginLeft: "5px",
                     },
-                    className: `${buttonClassModule.button} ${buttonClassModule.lookFilled} ${buttonClassModule.colorBrand} ${buttonClassModule.sizeSmall} ${buttonClassModule.grow}`,
+                    className: "yabd-generic-button",
                     onClick: () => {
                         UI.showConfirmationModal("Change Avatar Decoration (YABDP4Nitro)", React.createElement(DecorModal), {cancelText:""});
                     }
@@ -2748,13 +3087,7 @@ module.exports = class YABDP4Nitro {
                             backgroundColor: "var(--background-tertiary)"
                         },
                         onClick: () => {
-                            try{
-                                DiscordNative.clipboard.copy(" " + encodedStr);
-                                UI.showToast("3y3 copied to clipboard!", { type: "info" });    
-                            }catch(err){
-                                UI.showToast("Failed to copy to clipboard!", { type: "error", forceShow: true });   
-                                Logger.error("YABDP4Nitro", err);
-                            }
+                            copyToClipboard(" " + encodedStr, "3y3 copied to clipboard!", "Failed to copy to clipboard!");
                         },
                         onMouseOver: (e) => {
                             e.target.src = e.target.src.replace('.webp','.png');
@@ -2899,7 +3232,7 @@ module.exports = class YABDP4Nitro {
         //If you're trying to figure this shit out yourself, I recommend uncommenting the line below.
         //console.log(StreamButtons);
 
-        const settings = Data.load("YABDP4Nitro", "settings"); //just in case we can't access this;
+        const settings = Data.load(pluginThisRef.meta.name, "settings"); //just in case we can't access this;
 
         //If custom resolution tick is disabled or custom resolution is set to 0, set it to 1440
         let resolutionToSet = parseInt(settings.CustomResolution);
@@ -2947,7 +3280,7 @@ module.exports = class YABDP4Nitro {
         ApplicationStreamFPSButtons[2].label = fpsToSet.toString();
         ApplicationStreamFPS.FPS_60 = fpsToSet;
 
-        Data.save("YABDP4Nitro", "settings", settings);
+        Data.save(pluginThisRef.meta.name, "settings", settings);
     } //End of customizeStreamButtons()
     //#endregion
 
@@ -3007,8 +3340,10 @@ module.exports = class YABDP4Nitro {
                         if(emoji.animated) {
                             emojiUrl = emojiUrl.substr(0, emojiUrl.lastIndexOf(".")) + ".gif";
                         }
+
+                        let allNamesString = emoji.originalName ? emoji.originalName : emoji.name;
     
-                        let emojiString = `<${emoji.animated ? "a:" : ":"}${emoji.name}:${emoji.id}>`;
+                        let emojiString = `<${emoji.animated ? "a:" : ":"}${allNamesString}:${emoji.id}>`;
 
                         //If there is a heiphen (-) before the emote we are processing,
                         if(msg[1].content.includes("-" + emojiString)) {
@@ -3154,7 +3489,9 @@ module.exports = class YABDP4Nitro {
                         emojiUrl = emojiUrl.substr(0, emojiUrl.lastIndexOf(".")) + ".gif";
                     }
 
-                    let emojiString = `<${emoji.animated ? "a:" : ":"}${emoji.name}:${emoji.id}>`;
+                    let allNamesString = emoji.originalName ? emoji.originalName : emoji.name;
+
+                    let emojiString = `<${emoji.animated ? "a:" : ":"}${allNamesString}:${emoji.id}>`;
 
                     //If there is a heiphen before the emoji, skip it.
                     if(msg.content.includes("-" + emojiString)){
@@ -3216,7 +3553,9 @@ module.exports = class YABDP4Nitro {
                         emojiUrl = emojiUrl.substr(0, emojiUrl.lastIndexOf(".")) + ".gif";
                     }
 
-                    let emojiString = `<${emoji.animated ? "a:" : ":"}${emoji.name}:${emoji.id}>`;
+                    let allNamesString = emoji.originalName ? emoji.originalName : emoji.name;
+
+                    let emojiString = `<${emoji.animated ? "a:" : ":"}${allNamesString}:${emoji.id}>`;
                     if(msg.content.includes("-" + emojiString)){
                         msg.content = msg.content.replace(("-" + emojiString), emojiString);
                         return; //If there is a heiphen before the emoji, skip it.
@@ -3258,14 +3597,16 @@ module.exports = class YABDP4Nitro {
                         emojiUrl = emojiUrl.substr(0, emojiUrl.lastIndexOf(".")) + ".gif";
                     }
 
-                    let emojiString = `<${emoji.animated ? "a:" : ":"}${emoji.name}:${emoji.id}>`;
+                    let allNamesString = emoji.originalName ? emoji.originalName : emoji.name;
+
+                    let emojiString = `<${emoji.animated ? "a:" : ":"}${allNamesString}:${emoji.id}>`;
 
                     if(msg.content.includes("-" + emojiString)){
                         msg.content = msg.content.replace(("-" + emojiString), emojiString);
                         return; //If there is a heiphen before the emoji, skip it.
                     }
                     emojiInteration++;
-                    msg.content = msg.content.replace(emojiString, `[${emoji.name}](` + emojiUrl.split("?")[0] + `?size=${settings.emojiSize}&quality=lossless&${emojiInteration})`);
+                    msg.content = msg.content.replace(emojiString, `[${allNamesString}](` + emojiUrl.split("?")[0] + `?size=${settings.emojiSize}&quality=lossless&${emojiInteration})`);
                 });
             }
 
@@ -3339,6 +3680,8 @@ module.exports = class YABDP4Nitro {
             
             //starting editing message
             Patcher.before(this.meta.name, MessageActions, "startEditMessageRecord", (_, [channelId, msg]) => {
+                lastEditedMsg = msg;
+                lastEditedMsgCopy = {...msg};
     
                 let idFromUrlRegex = /(?<=emojis\/)(\d+?)(?=\.(png|webp|gif|avif|jpg|jpeg))/gi;
     
@@ -3379,8 +3722,13 @@ module.exports = class YABDP4Nitro {
                     })
                 }
             });
-
         }
+
+        Patcher.before(this.meta.name, MessageActions, "endEditMessage", () => {
+            if(lastEditedMsg?.content != undefined && lastEditedMsgCopy?.content != undefined)
+                //fix cancelling edit by restoring message to original state manually after cancellation
+                lastEditedMsg.content = lastEditedMsgCopy.content;
+        });
 
         //#endregion
     } //End of emojiBypass()
@@ -3620,8 +3968,9 @@ module.exports = class YABDP4Nitro {
                 React.createElement("button", {
                     id: "copy3y3button",
                     children: "Copy Colors 3y3",
-                    className: `${buttonClassModule.button} ${buttonClassModule.lookFilled} ${buttonClassModule.colorBrand} ${buttonClassModule.sizeSmall} ${buttonClassModule.grow}`,
+                    className: `yabd-generic-button`,
                     style: {
+                        height: "32px",
                         marginLeft: "10px",
                         marginTop: "10px"
                     },
@@ -3646,13 +3995,7 @@ module.exports = class YABDP4Nitro {
 
                         let encodedStr = ((padding || "") + " " + encoded);
 
-                        try{
-                            DiscordNative.clipboard.copy(encodedStr);
-                            UI.showToast("3y3 copied to clipboard!", { type: "info" });    
-                        }catch(err){
-                            UI.showToast("Failed to copy to clipboard!", { type: "error", forceShow: true });   
-                            Logger.error("YABDP4Nitro", err);
-                        }
+                        copyToClipboard(encodedStr, "3y3 copied to clipboard!", "Failed to copy to clipboard!");
                     }
                 })
             );
@@ -3791,7 +4134,7 @@ module.exports = class YABDP4Nitro {
                 React.createElement("button", {
                     id: "profileBannerButton",
                     children: "Copy Banner 3y3",
-                    className: `${buttonClassModule.button} ${buttonClassModule.lookFilled} ${buttonClassModule.colorBrand} ${buttonClassModule.sizeSmall} ${buttonClassModule.grow}`,
+                    className: `yabd-generic-button`,
                     size: "bd-button-small",
                     style: {
                         whiteSpace: "nowrap",
@@ -3875,13 +4218,7 @@ module.exports = class YABDP4Nitro {
                         if(encodedStr == "") return;
 
                         //copy to clipboard
-                        try{
-                            DiscordNative.clipboard.copy(encodedStr);
-                            UI.showToast("3y3 copied to clipboard!", { type: "info" });
-                        }catch(err){
-                            UI.showToast("Failed to copy to clipboard!", { type: "error", forceShow: true });   
-                            Logger.error("YABDP4Nitro", err);
-                        }
+                        copyToClipboard(encodedStr, "3y3 copied to clipboard!", "Failed to copy to clipboard!");
                         
                     } //end of onClick function
                 }) //end of react createElement
@@ -4027,7 +4364,7 @@ module.exports = class YABDP4Nitro {
                 UI.showToast(`[${this.meta.name}] Error parsing or reading data JSON.`, { type: "error", forceShow: true });
                 Logger.warn(this.meta.name, "Error parsing or reading data JSON.");
                 Logger.warn(this.meta.name, err);
-                data = {};
+                data = defaultData;
             }
         }catch(err){
             UI.showToast(`[${this.meta.name}] An error occurred loading the data file.`, { type: "error", forceShow: true });
@@ -4039,6 +4376,7 @@ module.exports = class YABDP4Nitro {
     //#region Start, Stop
     start(){
         Logger.info(this.meta.name, "(v" + this.meta.version + ") has started.");
+        pluginThisRef = this;
 
         try {
             //load settings from config
@@ -4060,7 +4398,7 @@ module.exports = class YABDP4Nitro {
         try {
             let currentVersionInfo = {};
             try {
-                currentVersionInfo = Object.assign({}, { version: this.meta.version, hasShownChangelog: false }, Data.load("YABDP4Nitro", "currentVersionInfo"));
+                currentVersionInfo = Object.assign({}, { version: this.meta.version, hasShownChangelog: false }, Data.load(this.meta.name, "currentVersionInfo"));
             } catch(err){
                 currentVersionInfo = { version: this.meta.version, hasShownChangelog: false };
             }
@@ -4088,6 +4426,71 @@ module.exports = class YABDP4Nitro {
             Logger.error(this.meta.name, err);
         }
 
+        DOM.addStyle("YABDP4NitroGeneral", `
+            /*wow it's discord css code*/
+            .yabd-text-h5 {
+                line-height: 20px;
+                color: var(--header-primary);
+                font-size: 16px;
+                font-weight: 500;
+                margin-bottom: 8px;
+                text-transform: unset 
+            }
+            .yabd-generic-button {
+                align-items: center;
+                background: none;
+                border: 1px solid var(--opacity-white-8);
+                border-radius: 8px;
+                box-sizing: border-box;
+                display: flex;
+                font-size: 14px;
+                font-weight: var(--font-weight-medium);
+                justify-content: center;
+                line-height: 16px;
+                padding: 2px 16px;
+                position: relative;
+                transition-duration: .2s;
+                -webkit-user-select: none;
+                -moz-user-select: none;
+                user-select: none;
+                cursor: pointer;
+                background-color: var(--button-filled-brand-background);
+                transition: background-color var(--custom-button-transition-duration) ease,color var(--custom-button-transition-duration) ease;
+            }
+
+            .yabd-generic-button:hover {
+                background-color: var(--button-filled-brand-background-hover);
+            }
+
+            .yabd-resolution-swapper-v2-button {
+                background-color: var(--button-secondary-background);
+                height: 46px;
+                width: 46px;
+                align-items: center;
+                color: var(--button-secondary-text);
+                border: 1px solid var(--border-faint);
+                border-radius: 8px;
+                box-sizing: border-box;
+                display: flex;
+                font-size: 14px;
+                font-weight: var(--font-weight-medium);
+                justify-content: center;
+                line-height: 16px;
+                padding: 2px 16px;
+                position: relative;
+                transition-duration: .2s;
+                -webkit-user-select: none;
+                -moz-user-select: none;
+                user-select: none;
+                cursor: pointer;
+                transition: background-color var(--custom-button-transition-duration) ease,color var(--custom-button-transition-duration) ease;
+            }
+
+            .yabd-resolution-swapper-v2-button:hover {
+                background-color: var(--button-secondary-background-hover);
+            }
+        `)
+
         this.saveAndUpdate();
     }
 
@@ -4096,8 +4499,11 @@ module.exports = class YABDP4Nitro {
         CurrentUser.premiumType = ORIGINAL_NITRO_STATUS;
         Patcher.unpatchAll(this.meta.name);
         Dispatcher.unsubscribe("COLLECTIBLES_CATEGORIES_V2_FETCH_SUCCESS", this.storeProductsFromCategories);
-        DOM.removeStyle(this.meta.name);
+        DOM.removeStyle("YABDP4NitroRemoveUpsell");
         DOM.removeStyle("YABDP4NitroBadges");
+        DOM.removeStyle("YABDP4NitroGeneral");
+        ContextMenu.unpatch('expression-picker', this.expressionPickerFunction);
+        ContextMenu.unpatch('stream-context', this.streamContextPatch);
         
         let ffmpegScript = document.getElementById("ffmpegScript");
         if(ffmpegScript){
