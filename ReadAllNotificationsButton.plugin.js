@@ -94,7 +94,7 @@ module.exports = (_ => {
 						className: BDFDB.disCNS.guildiconwrapper + BDFDB.disCN._readallnotificationsbuttoninner,
 							children: BDFDB.ReactUtils.createElement("div", {
 							className: BDFDB.disCNS.guildiconchildwrapper + BDFDB.disCNS.guildiconchildwrappernohoverbg + BDFDB.disCN._readallnotificationsbuttonbutton,
-							children: "read all",
+							children: "Read All",
 							onClick: _ => {
 								if (!_this.settings.general.confirmClear) this.clearClick();
 								else BDFDB.ModalUtils.confirm(_this, _this.labels.modal_confirmnotifications, _ => this.clearClick());
@@ -212,7 +212,7 @@ module.exports = (_ => {
 						label: this.defaults.general[key].description,
 						value: this.settings.general[key]
 					})).concat(BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.SettingsPanelList, {
-						title: "When left clicking the 'read all' Button mark following Elements as read:",
+						title: "When left clicking the 'Read All' Button mark following Elements as read:",
 						first: false,
 						last: true,
 						children: Object.keys(this.defaults.batch).map(key => BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.SettingsSaveItem, {

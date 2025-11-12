@@ -4,15 +4,15 @@
 			"BDFDB": "4.3.6",
 			"BetterFriendList": "1.6.3",
 			"BetterSearchPage": "1.2.8",
-			"GameActivityToggle": "1.3.6",
-			"ImageUtilities": "5.6.3",
+			"GameActivityToggle": "1.3.8",
+			"ImageUtilities": "5.6.4",
 			"OpenSteamLinksInApp": "1.1.8",
-			"ReadAllNotificationsButton": "1.8.3",
+			"ReadAllNotificationsButton": "1.8.4",
 			"RemoveBlockedUsers": "1.8.1",
 			"RevealAllSpoilers": "1.1.2",
-			"ServerDetails": "1.3.1",
+			"ServerDetails": "1.3.2",
 			"SplitLargeMessages": "1.8.7",
-			"SpotifyControls": "1.5.1"
+			"SpotifyControls": "1.5.2"
 		},
 		"choices": {
 			"toastPosition": "right"
