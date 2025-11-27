@@ -1,6 +1,6 @@
 {
     "currentVersionInfo": {
-        "version": "6.5.1",
+        "version": "6.6.0",
         "hasShownChangelog": true
     },
     "settings": {
@@ -58,6 +58,7 @@
         "extraContextMenus": true,
         "userSharpenPreferences": {},
         "sharpenStreams": false,
+        "displayNameStyles": true,
         "videoCodec": -1
     }
 }
