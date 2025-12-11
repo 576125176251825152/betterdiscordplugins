@@ -2,11 +2,11 @@
  * @name YABDP4Nitro
  * @author Riolubruh
  * @authorLink https://github.com/riolubruh
- * @version 6.6.0
+ * @version 6.6.4
  * @invite EFmGEWAUns
  * @source https://github.com/riolubruh/YABDP4Nitro
  * @donate https://github.com/riolubruh/YABDP4Nitro?tab=readme-ov-file#donate
- * @updateUrl https://raw.githubusercontent.com/riolubruh/YABDP4Nitro/main/YABDP4Nitro.plugin.js
+ * @updateUrl https://raw.githubusercontent.com/riolubruh/YABDP4Nitro/refs/heads/main/YABDP4Nitro.plugin.js
  * @description Unlock all screensharing modes, use cross-server & GIF emotes, and more!
  */
 /*@cc_on
@@ -20,10 +20,10 @@
  *
  * Copyright (c) 2025 Riolubruh and contributors
  *
- * Licensed under the Non-Profit Open Software License version 3.0 (NPOSL-3.0).
+ * Licensed under the Open Software License version 3.0 (OSL-3.0).
  * You may use, distribute, and modify this code under the terms of this license.
  *
- * Derivative works must be licensed under NPOSL-3.0 (or OSL-3.0 for for-profit use).
+ * Derivative works must be licensed under OSL-3.0.
  *
  * Removal or modification of this notice in the source code of any Derivative Work
  * of this software violates the terms of the license.
@@ -33,7 +33,7 @@
  * THE ENTIRE RISK AS TO THE QUALITY OF THIS SOFTWARE IS WITH YOU.
  *
  * You should have received a copy of the license agreement alongside this file.
- * If not, please visit https://github.com/riolubruh/YABDP4Nitro/blob/main/LICENSE.md
+ * If not, please visit https://opensource.org/license/osl-3-0-php
  *
 */
 
@@ -51,19 +51,28 @@ const {ApplicationStreamFPS,ApplicationStreamFPSButtons,ApplicationStreamFPSButt
     ApplicationStreamResolutionButtons,ApplicationStreamResolutionButtonsWithSuffixLabel,
     ApplicationStreamResolutions} = StreamButtons;
 
-const [
+const {
     UserStore,
-    getBannerURLMod,
     UserProfileStore,
+    PresenceStore,
+    SelectedGuildStore,
+    ChannelStore,
+    SelectedChannelStore,
+    SoundboardStore,
+    EmojiStore,
+    AppIconPersistedStoreState,
+    ClipsStore,
+    UserSettingsAccountStore,
+    ProfileEffectStore
+ } = Webpack.Stores;
+
+const [
+    getBannerURLMod,
     Dispatcher,
     AvatarDefaults,
     LadderModule,
     FetchCollectibleCategories,
-    PresenceStore,
-    SelectedGuildStore,
-    ChannelStore,
     MessageActions,
-    SelectedChannelStore,
     MessageEmojiReact,
     renderEmbedsMod,
     clientThemesModule,
@@ -71,16 +80,11 @@ const [
     accountSwitchModule,
     getAvatarUrlModule,
     fetchProfileEffects,
-    SoundboardStore,
-    EmojiStore,
     isEmojiAvailableMod,
     videoOptionFunctions,
     addFilesMod,
     RegularAppIcon,
-    AppIconPersistedStoreState,
     CustomAppIcon,
-    ClipsStore,
-    UserSettingsAccountStore,
     NameplatePreview,
     CloudUploader,
     messageRenderMod,
@@ -90,26 +94,22 @@ const [
     AppIcon,
     CanUserUseMod,
     loadMP4Box,
-    ProfileEffectStore,
     DMTag,
     GIFPickerRender,
     DiscordCopyToClipboardFn,
     ContextMenuSlider,
     VideoStream,
-    PictureInPicturePlayer
+    PictureInPicturePlayer,
+    stickerSendabilityModule,
+    ClipsEnabledMod,
+    MaxFileSizeMod
 ] = Webpack.getBulk(
-    {filter: Webpack.Filters.byStoreName('UserStore')},
     {filter: Webpack.Filters.byPrototypeKeys('getBannerURL')},
-    {filter: Webpack.Filters.byStoreName('UserProfileStore')},
     {filter: Webpack.Filters.byKeys("subscribe","dispatch")}, 
     {filter: Webpack.Filters.byKeys("getEmojiURL")}, //AvatarDefaults
     {filter: Webpack.Filters.byKeys("calculateLadder"), searchExports: true},
     {filter: Webpack.Filters.byStrings('{type:"COLLECTIBLES_CATEGORIES_FETCH"'), searchExports: true},
-    {filter: Webpack.Filters.byStoreName('PresenceStore')},
-    {filter: Webpack.Filters.byStoreName('SelectedGuildStore')},
-    {filter: Webpack.Filters.byStoreName('ChannelStore')},
-    {filter: Webpack.Filters.byKeys("jumpToMessage","_sendMessage")}, 
-    {filter: Webpack.Filters.byStoreName('SelectedChannelStore')},
+    {filter: Webpack.Filters.byKeys("jumpToMessage","_sendMessage")},
     {filter: Webpack.Filters.byStrings(',nudgeAlignIntoViewport:!0,position:','jumboable?'), searchExports: true}, //MessageEmojiReact
     {filter: Webpack.Filters.byPrototypeKeys('renderSocialProofingFileSizeNitroUpsell'), searchExports:true}, //renderEmbedsMod
     {filter: Webpack.Filters.byKeys("isPreview")}, //clientThemesModule
@@ -117,16 +117,11 @@ const [
     {filter: Webpack.Filters.byKeys("startSession","login")}, //accountSwitchModule
     {filter: Webpack.Filters.byPrototypeKeys('getAvatarURL')},
     {filter: Webpack.Filters.byStrings('{type:"PROFILE_EFFECTS_FETCH_ALL"'), searchExports: true}, //fetchProfileEffects
-    {filter: Webpack.Filters.byStoreName('SoundboardStore')},
-    {filter: Webpack.Filters.byStoreName('EmojiStore')},
     {filter: Webpack.Filters.byKeys("isEmojiFilteredOrLocked")},
     {filter: Webpack.Filters.byPrototypeKeys("updateVideoQuality")},
     {filter: Webpack.Filters.byKeys("addFiles")},
     {filter: Webpack.Filters.byStrings('M19.73 4.87a18.2'), searchExports: true}, //RegularAppIcon
-    {filter: Webpack.Filters.byStoreName('AppIconPersistedStoreState')},
     {filter: Webpack.Filters.byStrings('.iconSource,width:')}, //CustomAppIcon
-    {filter: Webpack.Filters.byStoreName('ClipsStore')},
-    {filter: Webpack.Filters.byStoreName('UserSettingsAccountStore')},
     {filter: Webpack.Filters.bySource('nameplateData', 'isPurchased')}, //NameplatePreview
     {filter: Webpack.Filters.byPrototypeKeys("uploadFileToCloud"), searchExports: true},
     {filter: Webpack.Filters.bySource(".SEND_FAILED,"), defaultExport: false}, //messageRenderMod
@@ -136,28 +131,26 @@ const [
     {filter: Webpack.Filters.byStrings(".APP_ICON,", "getCurrentDesktopIcon"), defaultExport: false}, //AppIcon
     {filter: Webpack.Filters.bySource(".getFeatureValue("), defaultExport: false}, //CanUserUseMod
     {filter: Webpack.Filters.byStrings("mp4boxInputFile.boxes")}, //load MP4Box
-    {filter: Webpack.Filters.byStoreName('ProfileEffectStore')},
     {filter: Webpack.Filters.bySource('NOT_STAFF_WARNING', 'botTagNotStaffWarning')},
     {filter: Webpack.Filters.byPrototypeKeys('renderGIF'), searchExports:true},
     {filter: Webpack.Filters.byStrings('navigator.clipboard.write'), searchExports:true},
     {filter: Webpack.Filters.byStrings('initialValue', 'label', 'sortedMarkers'), searchExports: true},
     {filter: Webpack.Filters.bySource('VideoStream', 'videoComponent')},
-    {filter: Webpack.Filters.bySource('PictureInPicturePlayer')}
+    {filter: Webpack.Filters.bySource('PictureInPicturePlayer')},
+    {filter: Webpack.Filters.bySource("SENDABLE_WITH_BOOSTED_GUILD"), map: { //stickerSendabilityModule
+        getStickerSendability: x=>x.toString().includes('canUseCustomStickersEverywhere'),
+        isSendableSticker: x=>x.toString().includes(')=>0===')
+    }},
+    {filter: Webpack.Filters.bySource('useExperiment({location:"useEnableClips'), map: { //ClipsEnabledMod
+        useEnableClips: x=>x.toString().includes('useExperiment({location:"useEnableClips"'),
+        areClipsEnabled: x=>x.toString().includes('areClipsEnabled'),
+    }},
+    {filter: Webpack.Filters.bySource('.premiumTier].limits.fileSize:'), map: { //MaxFileSizeMod
+        getMaxFileSize: x=>x.toString().includes('.premiumTier].limits.fileSize:'),
+        exceedsMessageSizeLimit: x=>x.toString().includes('Array.from(', '.size>')
+    }}
 );
 const messageRender = Object.values(messageRenderMod).find(o => typeof o === "object");
-const stickerSendabilityModule = Webpack.getMangled("SENDABLE_WITH_BOOSTED_GUILD",{
-    getStickerSendability: Webpack.Filters.byStrings("canUseCustomStickersEverywhere"),
-    isSendableSticker: Webpack.Filters.byStrings(")=>0===")
-});
-const ClipsEnabledMod = Webpack.getMangled('useExperiment({location:"useEnableClips"',{
-    useEnableClips: Webpack.Filters.byStrings('useExperiment({location:"useEnableClips"'),
-    areClipsEnabled: Webpack.Filters.byStrings('areClipsEnabled'),
-    isPremium: Webpack.Filters.byStrings('isPremiumAtLeast')
-});
-const MaxFileSizeMod = Webpack.getMangled('.premiumTier].limits.fileSize:', {
-    getMaxFileSize: Webpack.Filters.byStrings('.premiumTier].limits.fileSize:'),
-    exceedsMessageSizeLimit: Webpack.Filters.byStrings('Array.from(', '.size>')
-});
 //#endregion
 const fs = require("fs");
 const path = require("path");
@@ -168,8 +161,7 @@ const ORIGINAL_NITRO_STATUS = CurrentUser.premiumType;
 let ffmpeg, udta, udtaBuffer, crcTable, clipMaBuffer;
 
 //for fixing edit cancels
-let lastEditedMsg;
-let lastEditedMsgCopy;
+let lastEditedMsg, lastEditedMsgCopy;
 
 const defaultSettings = {
     "emojiSize": 64,
@@ -252,17 +244,19 @@ const config = {
             "discord_id": "359063827091816448",
             "github_username": "riolubruh"
         }],
-        "version": "6.6.0",
+        "version": "6.6.4",
         "description": "Unlock all screensharing modes, use cross-server & GIF emotes, and more!",
         "github": "https://github.com/riolubruh/YABDP4Nitro",
         "github_raw": "https://raw.githubusercontent.com/riolubruh/YABDP4Nitro/main/YABDP4Nitro.plugin.js"
     },
     changelog: [
         {
-            title: "6.6.0",
+            title: "6.6.4",
             items: [
-                "Added Fake Display Name Styles utilizing 3y3 encoding. You probably won't be able to use nameplates, name styles, and a custom avatar at the same time due to the character limit. Sorry. On by default, and it can be disabled in plugin settings under Profile.",
-                "Changed profile effects to use effect ID rather than index which means that it won't change over time. Please re-apply your profile effects."
+                "Fixed Fake Profile Effects not working after Discord update.",
+                "Fixed duplicate profile effects appearing when choosing a fake Profile Effect.",
+                "Limit min, target, and max bitrate to 50,000kbps to prevent people from melting their PCs.",
+                "Changed license to OSL-3.0.",
             ]
         }
     ],
@@ -487,7 +481,8 @@ module.exports = class YABDP4Nitro {
                     case "targetBitrate":
                     case "maxBitrate":
                     case "voiceBitrate":
-                        settings[id] = parseFloat(value);
+                        //protect people from their own stupidity
+                        settings[id] = parseFloat(value) > 50000 ? 50000 : parseFloat(value);
                         this.saveAndUpdate();
                         break;
                     default:
@@ -1240,12 +1235,22 @@ module.exports = class YABDP4Nitro {
         if(!this.GoLiveModalV2UpsellMod) this.GoLiveModalV2UpsellMod = await Webpack.waitForModule(Webpack.Filters.byStrings("GO_LIVE_MODAL_V2", "onNitroClick:function(){"), {defaultExport:false, signal: controller.signal});
 
         let renderFn = this.findMangledName(this.GoLiveModalV2UpsellMod, x=>x, "GoLiveModalV2Upsell");
-        if(!renderFn) return;
+        if(renderFn){
+            //Disable GoLiveModalV2 upsell
+            Patcher.instead(this.meta.name, this.GoLiveModalV2UpsellMod, renderFn, () => {
+                return;
+            });
+        }
 
-        //Disable GoLiveModalV2 upsell
-        Patcher.instead(this.meta.name, this.GoLiveModalV2UpsellMod, renderFn, () => {
-            return;
-        });
+        let sdHdPill = Webpack.getBySource('GO_LIVE_MODAL_V2', 'value:"hd"');
+        let sdHdPillFnName = this.findMangledName(sdHdPill, x=>x, "sdHdPill");
+        
+        if(sdHdPillFnName){
+            //remove other go live modal v2 upsell (SD/HD pill buttons)
+            Patcher.instead(this.meta.name, sdHdPill, sdHdPillFnName, (_,args,ret) => {
+                return;
+            });
+        }
     }
 
     findMangledName(module, filter, debugInfo){
@@ -1670,7 +1675,7 @@ module.exports = class YABDP4Nitro {
     async resolutionSwapperV2(){
 
         //wait for lazy loaded modules
-        if(this.GoLiveV2ModalMod == undefined) this.GoLiveV2ModalMod = await Webpack.waitForModule(Webpack.Filters.byStrings("GoLiveModalV2"), {defaultExport:false, signal: controller.signal});
+        if(this.GoLiveV2ModalMod == undefined) this.GoLiveV2ModalMod = await Webpack.waitForModule(Webpack.Filters.bySource('GO_LIVE_MODAL_V2', 'getUseSystemScreensharePicker', 'canStreamQuality'), {defaultExport:false, signal: controller.signal});
 
         //the sign of janky code inbound
         let GLMV2Opt = {
@@ -1682,187 +1687,187 @@ module.exports = class YABDP4Nitro {
         };
 
         let goLiveModalV2FnName = this.findMangledName(this.GoLiveV2ModalMod, x=>x, "GoLiveModalV2");
-        if(!goLiveModalV2FnName) return;
-
-        Patcher.after(this.meta.name, this.GoLiveV2ModalMod, goLiveModalV2FnName, (_,args,ret) => {
-            //maybe the worst amalgamation in this whole plugin?
-
-            if(GLMV2Opt.resolutionToSet != undefined) {
-                ret.props.state.resolution = GLMV2Opt.resolutionToSet;
-                settings.CustomResolution = GLMV2Opt.resolutionToSet;
-                GLMV2Opt.resolutionToSet = undefined;
-            }
-            if(GLMV2Opt.fpsToSet != undefined) {
-                ret.props.state.fps = GLMV2Opt.fpsToSet;
-                settings.CustomFPS = GLMV2Opt.fpsToSet;
-                GLMV2Opt.fpsToSet = undefined;
-            }
-
-            const RightButtonGroup = ret?.props?.children?.props?.children?.[1]?.props?.children?.[0]?.props?.children?.[1]?.props?.children;
-            
-            if(RightButtonGroup) {
-                RightButtonGroup.splice(2,0,React.createElement("button",{
-                    class: "yabd-resolution-swapper-v2-button",
-                    children: 'YABD',
-                    onClick: () => {
-                        let localStreamOptions = {
-                            resolutionToSet: undefined,
-                            fpsToSet: undefined,
-                            minBitrateToSet: undefined,
-                            targetBitrateToSet: undefined,
-                            maxBitrateToSet: undefined
-                        }
-
-                        //defaults
-                        if(settings.ResolutionEnabled) localStreamOptions.resolutionToSet = settings.CustomResolution;
-                        if(settings.CustomFPSEnabled) localStreamOptions.fpsToSet = settings.CustomFPS;
-                        if(settings.CustomBitrateEnabled) {
-                            localStreamOptions.minBitrateToSet = settings.minBitrate;
-                            localStreamOptions.targetBitrateToSet = settings.targetBitrate;
-                            localStreamOptions.maxBitrateToSet = settings.maxBitrate;
-                        }
-
-                        UI.showConfirmationModal("Configure Stream Settings",[
-                            React.createElement('div', {
-                                children: [
-                                    React.createElement('div', {
-                                        style: {
-                                            display: "flex",
-                                            width: "100%",
-                                            justifyContent: "space-around"
-                                        },
-                                        children: [
-                                            React.createElement("h1",{
-                                                children: "Resolution",
-                                                className: `yabd-text-h5`
-                                            }),
-                                            React.createElement("h1",{
-                                                children: "FPS",
-                                                className: `yabd-text-h5`
-                                            }),
-                                        ]
-                                    }),
-                                    React.createElement('div', {
-                                        style: {
-                                            display: "flex",
-                                            width: "100%",
-                                            justifyContent: "space-around"
-                                        },
-                                        children: [
-                                            React.createElement(Components.NumberInput,{
-                                                value: settings.CustomResolution,
-                                                min: -1,
-                                                onChange: (input) => {
-                                                    input = parseInt(input);
-                                                    if(isNaN(input)) input = 1440;
-                
-                                                    localStreamOptions.resolutionToSet = input;
-                                                }
-                                            }),
-                                            React.createElement(Components.NumberInput,{
-                                                value: settings.CustomFPS,
-                                                min: -1,
-                                                onChange: (input) => {
-                                                    input = parseInt(input);
-                                                    if(isNaN(input)) input = 60;
-                
-                                                    localStreamOptions.fpsToSet = input;
-                                                }
-                                            }),
-                                        ]
-                                    }),
-                                ]
-                            }),
-                            settings.CustomBitrateEnabled ? React.createElement("br") : undefined,
-                            settings.CustomBitrateEnabled ? React.createElement("h1",{
-                                children: "Custom Bitrate (kbps)",
-                                className: `yabd-text-h5`
-                            }) : undefined,
-                            settings.CustomBitrateEnabled ? React.createElement('div', {
-                                style: {
-                                    display: "flex",
-                                    width: "100%",
-                                    justifyContent: "space-around"
-                                },
-                                children: [
-                                    React.createElement("h1", {
-                                        children: "Min",
-                                        style: {
-                                            marginBlock: "0 5px",
-                                        },
-                                        className: `yabd-text-h5`
-                                    }),
-                                    React.createElement("h1", {
-                                        children: "Target",
-                                        style: {
-                                            marginBlock: "0 5px",
-                                        },
-                                        className: `yabd-text-h5`
-                                    }),
-                                    React.createElement("h1", {
-                                        children: "Max",
-                                        style: {
-                                            marginBlock: "0 5px",
-                                        },
-                                        className: `yabd-text-h5`
-                                    }),
-                                ]
-                            }) : undefined,
-                            React.createElement('div',{
-                                style: {
-                                    display: "flex",
-                                    width: "100%",
-                                    justifyContent: "space-around",
-                                    marginBottom: "5px"
-                                },
-                                children: settings.CustomBitrateEnabled ? [
-                                    React.createElement(Components.NumberInput,{
-                                        value: settings.minBitrate,
-                                        min: -1,
-                                        onChange: (input) => {
-                                            input = parseInt(input);
-                                            if(isNaN(input)) input = -1;
-                                            localStreamOptions.minBitrateToSet = input;
-                                        }
-                                    }),
-                                    React.createElement(Components.NumberInput,{
-                                        value: settings.targetBitrate,
-                                        min: -1,
-                                        onChange: (input) => {
-                                            input = parseInt(input);
-                                            if(isNaN(input)) input = -1;
-                                            localStreamOptions.targetBitrateToSet = input;
-                                        }
-                                    }),
-                                    React.createElement(Components.NumberInput,{
-                                        value: settings.maxBitrate,
-                                        min: -1,
-                                        onChange: (input) => {
-                                            input = parseInt(input);
-                                            if(isNaN(input)) input = -1;
-                                            localStreamOptions.maxBitrateToSet = input;
-                                        }
-                                    }),
-                                ] : undefined
-                            })
-                        ],
-                        {
-                            confirmText: "Apply",
-                            onConfirm: () => {
-                                GLMV2Opt = localStreamOptions;
-
-                                if(localStreamOptions.minBitrateToSet != undefined) settings.minBitrate = localStreamOptions.minBitrateToSet;
-                                if(localStreamOptions.targetBitrateToSet != undefined) settings.targetBitrate = localStreamOptions.targetBitrateToSet;
-                                if(localStreamOptions.maxBitrateToSet != undefined) settings.maxBitrate = localStreamOptions.maxBitrateToSet;
-                                Data.save(this.meta.name,"settings",settings);
-                            }
-                        }
-                        )
-                    }
+        if(goLiveModalV2FnName){
+            Patcher.after(this.meta.name, this.GoLiveV2ModalMod, goLiveModalV2FnName, (_,args,ret) => {
+                //maybe the worst amalgamation in this whole plugin?
+    
+                if(GLMV2Opt.resolutionToSet != undefined) {
+                    ret.props.state.resolution = GLMV2Opt.resolutionToSet;
+                    settings.CustomResolution = GLMV2Opt.resolutionToSet;
+                    GLMV2Opt.resolutionToSet = undefined;
                 }
-                ));
-            }
-        });
+                if(GLMV2Opt.fpsToSet != undefined) {
+                    ret.props.state.fps = GLMV2Opt.fpsToSet;
+                    settings.CustomFPS = GLMV2Opt.fpsToSet;
+                    GLMV2Opt.fpsToSet = undefined;
+                }
+    
+                const RightButtonGroup = ret?.props?.children?.props?.children?.props?.children?.[1]?.props?.children?.[0]?.props?.children?.[1]?.props?.children;
+                
+                if(RightButtonGroup) {
+                    RightButtonGroup.splice(2,0,React.createElement("button",{
+                        class: "yabd-resolution-swapper-v2-button",
+                        children: 'YABD',
+                        onClick: () => {
+                            let localStreamOptions = {
+                                resolutionToSet: undefined,
+                                fpsToSet: undefined,
+                                minBitrateToSet: undefined,
+                                targetBitrateToSet: undefined,
+                                maxBitrateToSet: undefined
+                            }
+    
+                            //defaults
+                            if(settings.ResolutionEnabled) localStreamOptions.resolutionToSet = settings.CustomResolution;
+                            if(settings.CustomFPSEnabled) localStreamOptions.fpsToSet = settings.CustomFPS;
+                            if(settings.CustomBitrateEnabled) {
+                                localStreamOptions.minBitrateToSet = settings.minBitrate;
+                                localStreamOptions.targetBitrateToSet = settings.targetBitrate;
+                                localStreamOptions.maxBitrateToSet = settings.maxBitrate;
+                            }
+    
+                            UI.showConfirmationModal("Configure Stream Settings",[
+                                React.createElement('div', {
+                                    children: [
+                                        React.createElement('div', {
+                                            style: {
+                                                display: "flex",
+                                                width: "100%",
+                                                justifyContent: "space-around"
+                                            },
+                                            children: [
+                                                React.createElement("h1",{
+                                                    children: "Resolution",
+                                                    className: `yabd-text-h5`
+                                                }),
+                                                React.createElement("h1",{
+                                                    children: "FPS",
+                                                    className: `yabd-text-h5`
+                                                }),
+                                            ]
+                                        }),
+                                        React.createElement('div', {
+                                            style: {
+                                                display: "flex",
+                                                width: "100%",
+                                                justifyContent: "space-around"
+                                            },
+                                            children: [
+                                                React.createElement(Components.NumberInput,{
+                                                    value: settings.CustomResolution,
+                                                    min: -1,
+                                                    onChange: (input) => {
+                                                        input = parseInt(input);
+                                                        if(isNaN(input)) input = 1440;
+                    
+                                                        localStreamOptions.resolutionToSet = input;
+                                                    }
+                                                }),
+                                                React.createElement(Components.NumberInput,{
+                                                    value: settings.CustomFPS,
+                                                    min: -1,
+                                                    onChange: (input) => {
+                                                        input = parseInt(input);
+                                                        if(isNaN(input)) input = 60;
+                    
+                                                        localStreamOptions.fpsToSet = input;
+                                                    }
+                                                }),
+                                            ]
+                                        }),
+                                    ]
+                                }),
+                                settings.CustomBitrateEnabled ? React.createElement("br") : undefined,
+                                settings.CustomBitrateEnabled ? React.createElement("h1",{
+                                    children: "Custom Bitrate (kbps)",
+                                    className: `yabd-text-h5`
+                                }) : undefined,
+                                settings.CustomBitrateEnabled ? React.createElement('div', {
+                                    style: {
+                                        display: "flex",
+                                        width: "100%",
+                                        justifyContent: "space-around"
+                                    },
+                                    children: [
+                                        React.createElement("h1", {
+                                            children: "Min",
+                                            style: {
+                                                marginBlock: "0 5px",
+                                            },
+                                            className: `yabd-text-h5`
+                                        }),
+                                        React.createElement("h1", {
+                                            children: "Target",
+                                            style: {
+                                                marginBlock: "0 5px",
+                                            },
+                                            className: `yabd-text-h5`
+                                        }),
+                                        React.createElement("h1", {
+                                            children: "Max",
+                                            style: {
+                                                marginBlock: "0 5px",
+                                            },
+                                            className: `yabd-text-h5`
+                                        }),
+                                    ]
+                                }) : undefined,
+                                React.createElement('div',{
+                                    style: {
+                                        display: "flex",
+                                        width: "100%",
+                                        justifyContent: "space-around",
+                                        marginBottom: "5px"
+                                    },
+                                    children: settings.CustomBitrateEnabled ? [
+                                        React.createElement(Components.NumberInput,{
+                                            value: settings.minBitrate,
+                                            min: -1,
+                                            onChange: (input) => {
+                                                input = parseInt(input);
+                                                if(isNaN(input)) input = -1;
+                                                localStreamOptions.minBitrateToSet = input;
+                                            }
+                                        }),
+                                        React.createElement(Components.NumberInput,{
+                                            value: settings.targetBitrate,
+                                            min: -1,
+                                            onChange: (input) => {
+                                                input = parseInt(input);
+                                                if(isNaN(input)) input = -1;
+                                                localStreamOptions.targetBitrateToSet = input;
+                                            }
+                                        }),
+                                        React.createElement(Components.NumberInput,{
+                                            value: settings.maxBitrate,
+                                            min: -1,
+                                            onChange: (input) => {
+                                                input = parseInt(input);
+                                                if(isNaN(input)) input = -1;
+                                                localStreamOptions.maxBitrateToSet = input;
+                                            }
+                                        }),
+                                    ] : undefined
+                                })
+                            ],
+                            {
+                                confirmText: "Apply",
+                                onConfirm: () => {
+                                    GLMV2Opt = localStreamOptions;
+    
+                                    if(localStreamOptions.minBitrateToSet != undefined) settings.minBitrate = localStreamOptions.minBitrateToSet;
+                                    if(localStreamOptions.targetBitrateToSet != undefined) settings.targetBitrate = localStreamOptions.targetBitrateToSet;
+                                    if(localStreamOptions.maxBitrateToSet != undefined) settings.maxBitrate = localStreamOptions.maxBitrateToSet;
+                                    Data.save(this.meta.name,"settings",settings);
+                                }
+                            }
+                            )
+                        }
+                    }
+                    ));
+                }
+            });
+        }
     }
     // #endregion
 
@@ -2877,14 +2882,16 @@ module.exports = class YABDP4Nitro {
 
         if(settings.killProfileEffects) return; //profileFX is mutually exclusive with killProfileEffects (obviously)
 
-        //if profile effects data hasn't been fetched by the client yet
-        if(this.profileEffects == undefined || this.profileEffects?.length === 0){
-            //make the client fetch profile effects
-            await fetchProfileEffects();
-            //store profile effects
-            this.profileEffects = ProfileEffectStore.getAllProfileEffects();
-        }
+        const profileEffects = ProfileEffectStore.getAllProfileEffects();
+        let profileEffectsFiltered = [];
+        let profileEffectsTemp = {};
 
+        //remove duplicate effects
+        for(let i=0;i<profileEffects.length;i++){
+            let effect = profileEffects[i];
+            profileEffectsTemp[effect.config.skuId] = effect;
+        }
+        profileEffectsFiltered = Object.values(profileEffectsTemp);
 
         Patcher.after(this.meta.name, UserProfileStore, "getUserProfile", (_, [args], ret) => {
             //error prevention
@@ -2911,10 +2918,10 @@ module.exports = class YABDP4Nitro {
                     //ignore invalid data 
                     if(isNaN(effectId)) return;
                     //ignore if the profile effect id does not point to an actual profile effect
-                    if(this.profileEffects.filter(x => x.skuId == effectId).length == 0) return;
+                    if(profileEffectsFiltered.filter(x => x.skuId == effectId).length == 0) return;
                     
                     //get profile effect
-                    const effect = this.profileEffects.filter(x => x.skuId == effectId)[0];
+                    const effect = profileEffectsFiltered.filter(x => x.skuId == effectId || x.config.skuId == effectId)[0];
 
                     //apply profile effect
                     ret.profileEffect = {
@@ -2933,7 +2940,7 @@ module.exports = class YABDP4Nitro {
 
         //wait for profile effect section renderer to be loaded and store
         if(!this.profileEffectSectionRenderer)
-            this.profileEffectSectionRenderer = await Webpack.waitForModule(Webpack.Filters.byStrings("PROFILE_EFFECTS_INLINE_SETTINGS","initialSelectedEffect"), {defaultExport:false, signal: controller.signal});
+            this.profileEffectSectionRenderer = await Webpack.waitForModule(Webpack.Filters.byStrings("pendingProfileEffect","initialSelectedEffect"), {defaultExport:false, signal: controller.signal});
 
         let ProfileEffectSectionFnName = this.findMangledName(this.profileEffectSectionRenderer, x=>x, "ProfileEffectSection");
         if(!ProfileEffectSectionFnName) return;
@@ -2942,19 +2949,17 @@ module.exports = class YABDP4Nitro {
             if(!args) return;
             if(args.isTryItOut) return;
 
-            const profileEffects = this.profileEffects;
-
             function ProfileEffects({query}){
 
                 let profileEffectChildren = [];
                 let actualRuns = 0;
 
                 //for each profile effect
-                for(let i = 0; i < profileEffects.length; i++){
+                for(let i = 0; i < profileEffectsFiltered.length; i++){
 
                     //get preview image url
-                    let previewURL = profileEffects[i].config.thumbnailPreviewSrc;
-                    let title = profileEffects[i].config.title;
+                    const previewURL = profileEffectsFiltered[i].config.thumbnailPreviewSrc;
+                    const title = profileEffectsFiltered[i].config.title;
 
                     //search
                     if(query.trim() != "") {
@@ -2964,7 +2969,7 @@ module.exports = class YABDP4Nitro {
                     }
 
                     //encode 3y3
-                    let encodedStr = secondsightifyEncodeOnly("fx" + profileEffects[i].skuId); // fx1293373563381878836
+                    let encodedStr = secondsightifyEncodeOnly("fx" + profileEffectsFiltered[i].config.skuId); // fx1293373563381878836
                     //javascript that runs onclick for each profile effect button
                     let copyDecoration3y3 = function(){
                         copyToClipboard(" " + encodedStr, "3y3 copied to clipboard!");
@@ -3054,8 +3059,8 @@ module.exports = class YABDP4Nitro {
 
     killProfileFX(){ //self explanatory, just tries to make it so any profile that has a profile effect appears without it
         Patcher.after(this.meta.name, UserProfileStore, "getUserProfile", (_, args, ret) => {
-            if(ret?.profileEffectID === undefined) return;
-            ret.profileEffectID = undefined;
+            if(ret?.profileEffect === undefined) return;
+            ret.profileEffect = undefined;
         });
     }
     // #endregion
@@ -4442,26 +4447,23 @@ module.exports = class YABDP4Nitro {
     }
 
     newUpdateNotify(remoteMeta, remoteFile){
-        Logger.info(this.meta.name, "A new update is available!");
+        Logger.info(this.meta.name, `Update ${remoteMeta.version} is available!`);
 
-        UI.showConfirmationModal("Update Available", [`Update ${remoteMeta.version} is now available for YABDP4Nitro!`, "Press Download Now to update!"], {
-            confirmText: "Download Now",
-            onConfirm: async (e) => {
-                if(remoteFile){
-                    Plugins.disable(this.meta.name);
+        UI.showNotification({
+            title: "YABDP4Nitro Update Available!",
+            content: `Update ${remoteMeta.version} is now available!`,
+            actions: [{
+                label: "Update",
+                onClick: async (e) => {
                     try {
-                        await new Promise(r => fs.writeFile(path.join(Plugins.folder, `${this.meta.name}.plugin.js`), remoteFile, r));
-                        let currentVersionInfo = Data.load(this.meta.name, "currentVersionInfo");
-                        currentVersionInfo.hasShownChangelog = false;
-                        Data.save(this.meta.name, "currentVersionInfo", currentVersionInfo);
-                    } catch(err){
-                        UI.showToast("An error occurred when trying to download the update!", { type: "error", forceShow: true });
-                    }finally{
-                        Plugins.enable(this.meta.name);
+                        await new Promise(r => fs.writeFile(path.join(Plugins.folder,`${this.meta.name}.plugin.js`),remoteFile,r));
+                    } catch(err) {
+                        UI.showToast("An error occurred when trying to download the update!",{type: "error",forceShow: true});
+                        Logger.error(this.meta.name, err);
                     }
                 }
-            }
-        });
+            }]
+        })
     }
     //#endregion
 
@@ -4486,14 +4488,12 @@ module.exports = class YABDP4Nitro {
                 data = Object.assign({}, defaultData, JSON.parse(fs.readFileSync(dataFilePath)));
             }catch(err){
                 UI.showToast(`[${this.meta.name}] Error parsing or reading data JSON.`, { type: "error", forceShow: true });
-                Logger.warn(this.meta.name, "Error parsing or reading data JSON.");
-                Logger.warn(this.meta.name, err);
+                Logger.error(this.meta.name, `Error parsing or reading ${this.meta.name}.data.json.`, err);
                 data = defaultData;
             }
         }catch(err){
             UI.showToast(`[${this.meta.name}] An error occurred loading the data file.`, { type: "error", forceShow: true });
-            Logger.error(this.meta.name, "An error occurred loading the data file.");
-            Logger.error(this.meta.name, err);
+            Logger.error(this.meta.name, "An error occurred loading the data file.", err);
         }
     }
 

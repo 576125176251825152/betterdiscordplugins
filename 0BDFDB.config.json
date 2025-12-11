@@ -1,7 +1,7 @@
 {
 	"all": {
 		"changeLogs": {
-			"BDFDB": "4.3.7",
+			"BDFDB": "4.3.9",
 			"BetterFriendList": "1.6.3",
 			"BetterSearchPage": "1.2.8",
 			"GameActivityToggle": "1.3.8",
@@ -10,7 +10,7 @@
 			"ReadAllNotificationsButton": "1.8.4",
 			"RemoveBlockedUsers": "1.8.1",
 			"RevealAllSpoilers": "1.1.2",
-			"ServerDetails": "1.3.2",
+			"ServerDetails": "1.3.3",
 			"SplitLargeMessages": "1.8.7",
 			"SpotifyControls": "1.5.2"
 		},
@@ -25,8 +25,8 @@
 			"useChromium": false
 		},
 		"hashes": {
-			"0BDFDB.data.json": "8d4557702b26c5b68134cdf4f1dad63e2a7b2c4e",
-			"0BDFDB.raw.css": "709588842bae720d3d97c81e785af1adcbfb5a37"
+			"0BDFDB.data.json": "a5992d566ee38424b551d4ec6445328c812c4d5d",
+			"0BDFDB.raw.css": "6dc41f1c040ba570e22de67ddbb28b23b220657a"
 		}
 	}
 }
