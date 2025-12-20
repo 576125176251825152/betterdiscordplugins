@@ -113,6 +113,9 @@ img:not([src]), img[src=""], img[src="null"] {
 	margin-left: 6px;
 }
 
+[REPLACE_CLASS_settingspanel] [REPLACE_CLASS_slider] {
+	min-width: 250px;
+}
 [REPLACE_CLASS_settingspanel] [REPLACE_CLASS_slidermark] {
 	line-height: 10px;
 }
@@ -896,7 +899,7 @@ input[REPLACE_CLASS_input][REPLACE_CLASS_inputerror] {
 }
 
 
-[REPLACE_CLASS_tooltiplistitem] [REPLACE_CLASS_flowerstarchild] > svg {
+[REPLACE_CLASS_tooltip] [REPLACE_CLASS_flowerstarchild] > svg {
 	width: 10px;
 	height: 10px;
 }
@@ -1467,15 +1470,13 @@ input[REPLACE_CLASS_input][REPLACE_CLASS_inputerror] {
 	font-size: 11px;
 	margin-top: 2px;
 }
-[REPLACE_CLASS_tooltip][REPLACE_CLASS_tooltipcustom],
-[REPLACE_CLASS_tooltiplistitem][REPLACE_CLASS_tooltipcustom] {
+[REPLACE_CLASS_tooltip][REPLACE_CLASS_tooltipcustom] {
 	color: #fff;
 }
 [REPLACE_CLASS_tooltip]:has([REPLACE_CLASS_tooltipcontent]:empty) {
 	display: none !important;
 }
-[REPLACE_CLASS_tooltip][REPLACE_CLASS_tooltipcustom] [REPLACE_CLASS_tooltipnote],
-[REPLACE_CLASS_tooltiplistitem][REPLACE_CLASS_tooltipcustom] [REPLACE_CLASS_tooltipnote] {
+[REPLACE_CLASS_tooltip][REPLACE_CLASS_tooltipcustom] [REPLACE_CLASS_tooltipnote] {
 	color: #bbb;
 }
 [REPLACE_CLASS_tooltipcustom] [REPLACE_CLASS_tooltipguildnametext],

@@ -2,7 +2,7 @@
  * @name BDFDB
  * @author DevilBro
  * @authorId 278543574059057154
- * @version 4.4.1
+ * @version 4.4.2
  * @description Required Library for DevilBro's Plugins
  * @invite Jx3TjNS
  * @donate https://www.paypal.me/MircoWittrien
@@ -2033,6 +2033,7 @@ module.exports = (_ => {
 					if (typeof config.type != "string" || !BDFDB.disCN["tooltip" + config.type.toLowerCase()]) config.type = "top";
 					let type = config.type.toLowerCase();
 					BDFDB.DOMUtils.addClass(tooltip, BDFDB.disCN["tooltip" + type], config.className);
+					BDFDB.DOMUtils.addClass(tooltipContent, config.contentClassName);
 					
 					let fontColorIsGradient = false, customBackgroundColor = false, style = "";
 					if (config.style) style += config.style;
@@ -2066,7 +2067,7 @@ module.exports = (_ => {
 					else if (config.color && BDFDB.disCN["tooltip" + config.color.toLowerCase()]) BDFDB.DOMUtils.addClass(tooltip, BDFDB.disCN["tooltip" + config.color.toLowerCase()]);
 					else BDFDB.DOMUtils.addClass(tooltip, BDFDB.disCN.tooltipprimary);
 					
-					if (config.list || BDFDB.ObjectUtils.is(config.guild)) BDFDB.DOMUtils.addClass(tooltip, BDFDB.disCN.tooltiplistitem);
+					if (config.list || BDFDB.ObjectUtils.is(config.guild)) BDFDB.DOMUtils.addClass(tooltipContent, BDFDB.disCN.guildlistitemtooltip);
 					
 					const removeTooltip = _ => {
 						document.removeEventListener("wheel", wheel);
