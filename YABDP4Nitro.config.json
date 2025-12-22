@@ -1,6 +1,6 @@
 {
     "currentVersionInfo": {
-        "version": "6.6.6",
+        "version": "6.7.0",
         "hasShownChangelog": true
     },
     "settings": {
@@ -59,6 +59,10 @@
         "userSharpenPreferences": {},
         "sharpenStreams": false,
         "displayNameStyles": true,
+        "customUserThemeSettings": {
+            "custom": false,
+            "theme": "dark"
+        },
         "videoCodec": -1
     }
 }
