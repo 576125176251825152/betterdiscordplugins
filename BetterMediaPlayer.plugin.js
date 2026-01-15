@@ -1,6 +1,6 @@
 /**
  * @name BetterMediaPlayer
- * @version 1.2.20
+ * @version 1.2.21
  * @author unknown81311_&_Doggybootsy
  * @description Adds more features to the MediaPlayer inside of Discord. (**Only adds PIP and Loop!**)
  * @authorLink https://betterdiscord.app/plugin?id=377
@@ -19,8 +19,8 @@ const [
   useStateFromStores,
   PopoutWindow,
   errorClasses,
-  errorPage,
-  buttons,
+  { errorPage },
+  { stack },
   Flex,
   i18n,
   inviteActions,
@@ -47,7 +47,7 @@ const [
   { filter: m => m.render?.toString().includes("Missing guestWindow reference") },
   { filter: m => m.wrapper && m.note },
   { filter: m => m.errorPage },
-  { filter: m => m.buttons },
+  { filter: m => m.stack && Object.keys(m).length < 5 },
   { filter: m => m.defaultProps?.basis, searchExports: true },
   { filter: m => m.t && m.intl },
   { filter: m => m.resolveInvite },
@@ -557,7 +557,7 @@ function ErrorSplash({ src, errorInfo, windowKey }) {
                 ]
               }),
               React.createElement("div", {
-                className: buttons,
+                className: stack,
                 children: [
                   React.createElement(Button, {
                     size: Button.Sizes.LARGE,

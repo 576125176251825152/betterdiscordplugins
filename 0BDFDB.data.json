@@ -264,6 +264,9 @@
 		"UserBannerUtils": {"strings": ["displayProfile:", "bannerSrc:", "new Image"], "exported": false, "value": "exports", "map": {
 			"getBanner": ["displayProfile:", "bannerSrc:", "new Image"]
 		}},
+		"UserNameFontUtils": {"strings": [".fontId", ".dnsFont"], "exported": false, "value": "exports", "map": {
+			"getClass": [".fontId", ".dnsFont"]
+		}},
 		"UserNameUtils": {"props": ["getNickname", "getName", "useName"]},
 		"UserPopoutUtils": {"strings": ["Cannot moderate user in DM or group DM", "onCloseContext"]},
 		"UserProfileUtils": {"props": ["fetchProfile", "getUser"]},
@@ -512,8 +515,11 @@
 		"MessageTimestamp": {"strings": [".timestampVisibleOnHover", "timeFormatted:"], "noSearch": true},
 		"MessageToolbar": {"strings": ["useMessageUtilitiesProps", "hasDeveloperMode", "emojiPicker:"], "noSearch": true},
 		"MessageUsername": {"strings": ["\"username\"", "colorString", "compact"]},
-		"ModalHeader": {"strings": ["headerIdIsManaged:", ".header,", "Direction.HORIZONTAL"]},
-		"ModalFooter": {"strings": [".footerSeparator", ".separator", "Direction.HORIZONTAL_REVERSE"]},
+		"Modal": {"strings": ["actionBarInputLayout", "listProps", "notice:"]},
+		"ModalActions": {"strings": ["actionBarTrailingFullWidth", "autoFocus", "primary"]},
+		"ModalContent": {"strings": ["let{controls:", "listProps", "children:"]},
+		"ModalHeader": {"strings": ["headerCentered", "headerTitle", "color"]},
+		"ModalFooter": {"strings": ["\"footer\"", "children:", ".section)"]},
 		"ModalRoot": {"strings": ["rootWithShadow", "ImpressionTypes.MODAL", "transitionState:"]},
 		"NameContainer": {"strings": ["\"listitem\"", "wrappedName", "innerClassName"], "noSearch": true},
 		"NameContainerAvatar": {"strings": ["shouldAnimateStatus", "avatarDecoration", "MEMBER_USER"], "noSearch": true},
@@ -534,7 +540,7 @@
 		"PeopleListSectionedLazy": {"strings": ["rows", "peopleList", "id:\"people-list\""]},
 		"PeopleListSectionedNonLazy": {"strings": ["rows", "peopleList", "id:\"people\""]},
 		"PictureInPictureVideo": {"strings": [".topControls", ".bottomControl", "screenMessage", "renderBottomLeftControls:"]},
-		"PrivateChannel": {"strings": ["isMultiUserDM", "PrivateChannel.renderAvatar", "isGDMFacepileEnabled"], "noSearch": true},
+		"PrivateChannel": {"strings": ["isMultiUserDM", "PrivateChannel.renderAvatar", "placement:"], "noSearch": true},
 		"PrivateChannelRecipients": {"strings": [".membersWrap", "recipients"]},
 		"PrivateChannelsList": {"strings": ["privateChannelIds", "privateChannelRecipientsInviteButtonIcon"]},
 		"QuickMessage": {"strings": ["QUICK_DM_USER", ".NORMAL"]},
@@ -2719,6 +2725,7 @@
 		"messagewrapper": ["MessageBody", "wrapper"],
 		"messagezalgo": ["MessageBody", "zalgo"],
 		"modal": ["Modal", "root"],
+		"modalbodyinner": ["ModalNew", "bodyInner"],
 		"modalcarouselmodal": ["NotFound", "carouselModal"],
 		"modalclose": ["Modal", "close"],
 		"modalchangelogmodal": ["BDFDB", "changeLogModal"],
@@ -3181,6 +3188,7 @@
 		"userheaderbottag": ["UserHeaderUsername", "bot"],
 		"userheaderclickableusername": ["UserHeaderUsername", "clickableUsername"],
 		"userheadernickname": ["UserHeaderUsername", "nickname"],
+		"userheadernicknamewithstyle": ["UserHeaderUsername", "nicknameWithDisplayNameStyles"],
 		"userheadertag": ["UserHeaderUsername", "userTag"],
 		"userpopoutavatarclickable": ["UserPopoutHeader", "clickable"],
 		"userpopoutavatarhint": ["UserPopoutHeader", "avatarHint"],
