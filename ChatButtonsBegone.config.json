@@ -12,14 +12,19 @@
             "superReactionButton": true,
             "editButton": true,
             "replyButton": true,
-            "forwardButton": true
+            "forwardButton": true,
+            "addReactionButton": false,
+            "removeMore": false
         },
         "dms": {
             "friendsTab": false,
             "premiumTab": true,
             "snowsgivingTab": true,
             "discordBirthdayTab": true,
-            "discordShopTab": true
+            "discordShopTab": true,
+            "quickSwitcher": false,
+            "DMHeader": "show",
+            "activeNow": "show"
         },
         "channels": {
             "boostBar": true,
@@ -30,14 +35,62 @@
             "screensharePanelButton": false,
             "activityPanelButton": true,
             "soundboardPanelButton": true,
-            "krispButton": true
+            "krispButton": true,
+            "invitePlaceholder": false,
+            "gameActivityPanel": false,
+            "voiceAvatars": false
         },
         "toolbar": {
             "inboxButton": true,
-            "helpButton": true
+            "helpButton": true,
+            "navButtons": false,
+            "locator": false,
+            "checkpointButton": false
         },
         "compatibility": {
             "invisibleTypingButton": true
+        },
+        "chatbar": {
+            "attachButton": false,
+            "giftButton": true,
+            "gifButton": false,
+            "stickerButton": false,
+            "emojiButton": false,
+            "appLauncherButton": false
+        },
+        "servers": {
+            "serverBanner": false,
+            "boostBar": true,
+            "serverGuide": false,
+            "eventButton": false,
+            "membersButton": false,
+            "boostsButton": false,
+            "shopButton": false,
+            "inviteButton": false,
+            "activitySection": false,
+            "channelsAndRoles": false,
+            "addServerButton": false,
+            "discoverButton": false,
+            "unreadIndicator": "show"
+        },
+        "profileCustomizations": {
+            "clanTag": "show",
+            "namePlate": false,
+            "avatarDecoration": false,
+            "hideBadges": false,
+            "profileEffects": false,
+            "hideCollection": false,
+            "hideWishlist": false
+        },
+        "miscellaneous": {
+            "nitroUpsell": false,
+            "noQuests": false,
+            "placeholderText": false,
+            "avatarPopover": false,
+            "listSeparator": "show",
+            "seasonalEvents": false,
+            "blockedMessage": false
         }
-    }
+    },
+    "settingVersion": "3.3.0"
 }
