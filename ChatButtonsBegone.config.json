@@ -24,7 +24,8 @@
             "discordShopTab": true,
             "quickSwitcher": false,
             "DMHeader": "show",
-            "activeNow": "show"
+            "activeNow": "show",
+            "libraryTab": false
         },
         "channels": {
             "boostBar": true,
@@ -38,7 +39,8 @@
             "krispButton": true,
             "invitePlaceholder": false,
             "gameActivityPanel": false,
-            "voiceAvatars": false
+            "voiceAvatars": false,
+            "gameActivityButton": false
         },
         "toolbar": {
             "inboxButton": true,
@@ -71,11 +73,12 @@
             "channelsAndRoles": false,
             "addServerButton": false,
             "discoverButton": false,
-            "unreadIndicator": "show"
+            "unreadIndicator": "show",
+            "settingsButton": false
         },
         "profileCustomizations": {
             "clanTag": "show",
-            "namePlate": false,
+            "namePlate": "show",
             "avatarDecoration": false,
             "hideBadges": false,
             "profileEffects": false,
@@ -89,8 +92,9 @@
             "avatarPopover": false,
             "listSeparator": "show",
             "seasonalEvents": false,
-            "blockedMessage": false
+            "blockedMessage": false,
+            "ioChevrons": false
         }
     },
-    "settingVersion": "3.3.0"
+    "settingVersion": "3.4.0"
 }
