@@ -2,7 +2,7 @@
  * @name BDFDB
  * @author DevilBro
  * @authorId 278543574059057154
- * @version 4.4.4
+ * @version 4.4.6
  * @description Required Library for DevilBro's Plugins
  * @invite Jx3TjNS
  * @donate https://www.paypal.me/MircoWittrien
@@ -3097,14 +3097,8 @@ module.exports = (_ => {
 								e.returnValue.props.children = typeof e.returnValue.props.children == "function" ? (_ => {return null;}) : [];
 								BDFDB.ReactUtils.forceUpdate(LayerProviderIns);
 								let messagesScroller = document.querySelector(BDFDB.dotCN.messagesscroller);
-								let scrollTop = messagesScroller.scrollTop;
-								BDFDB.TimeUtils.interval((interval, count) => {
-									let newMessagesScroller = document.querySelector(BDFDB.dotCN.messagesscroller);
-									if (newMessagesScroller != messagesScroller || count > 6000) {
-										newMessagesScroller.scrollTo({top: scrollTop});
-										BDFDB.TimeUtils.clear(interval);
-									}
-								}, 10);
+								let scrollTop = messagesScroller && messagesScroller.scrollTop;
+								if (scrollTop) requestAnimationFrame(() => messagesScroller.scrollTo({top: scrollTop}));
 							}}, {once: true});
 							BDFDB.ReactUtils.forceUpdate(LayerProviderIns);
 						}
@@ -4818,9 +4812,11 @@ module.exports = (_ => {
 										})
 									].filter(n => n)
 								}),
-								this.props.hint && BDFDB.ReactUtils.createElement("div", {
-									className: BDFDB.disCN.menuhintcontainer,
-									children: typeof this.props.hint == "function" ? this.props.hint(this) : this.props.hint
+								this.props.hint && !this.props.showIconFirst && BDFDB.ReactUtils.createElement("div", {
+									className: BDFDB.disCN.menuiconcontainer,
+									children: BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.MenuHint, {
+										children: typeof this.props.hint == "function" ? this.props.hint(this) : this.props.hint
+									})
 								}),
 								this.props.icon && !this.props.showIconFirst && BDFDB.ReactUtils.createElement("div", {
 									className: BDFDB.disCN.menuiconcontainer,

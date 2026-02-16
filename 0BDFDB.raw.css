@@ -114,7 +114,7 @@ img:not([src]), img[src=""], img[src="null"] {
 }
 
 [REPLACE_CLASS_settingspanel] [REPLACE_CLASS_slider] {
-	min-width: 250px;
+	min-width: 170px;
 }
 [REPLACE_CLASS_settingspanel] [REPLACE_CLASS_slidermark] {
 	line-height: 10px;
@@ -362,10 +362,13 @@ img:not([src]), img[src=""], img[src="null"] {
 	height: 24px;
 }
 
+[REPLACE_CLASS_menuiconcontainer]:has([REPLACE_CLASS_menuhint]) {
+	width: unset;
+	max-width: 42px;
+}
 [REPLACE_CLASS_menuhint] {
 	width: 42px;
 	max-width: 42px;
-	margin-left: 8px;
 }
 
 [REPLACE_CLASS_cursordefault] {

@@ -83,7 +83,8 @@
             "hideBadges": false,
             "profileEffects": false,
             "hideCollection": false,
-            "hideWishlist": false
+            "hideWishlist": false,
+            "profileGIF": false
         },
         "miscellaneous": {
             "nitroUpsell": false,
@@ -93,8 +94,9 @@
             "listSeparator": "show",
             "seasonalEvents": false,
             "blockedMessage": false,
-            "ioChevrons": false
+            "ioChevrons": false,
+            "tagsBotApp": false
         }
     },
-    "settingVersion": "3.4.0"
+    "settingVersion": "3.4.4"
 }
