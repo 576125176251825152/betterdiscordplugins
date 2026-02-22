@@ -47,7 +47,14 @@
             "helpButton": true,
             "navButtons": false,
             "locator": false,
-            "checkpointButton": false
+            "checkpointButton": false,
+            "threadsButton": false,
+            "notifyButton": false,
+            "pinnedButton": false,
+            "memberButton": false,
+            "voiceButton": false,
+            "videoButton": false,
+            "profileButton": false
         },
         "compatibility": {
             "invisibleTypingButton": true
@@ -84,7 +91,8 @@
             "profileEffects": false,
             "hideCollection": false,
             "hideWishlist": false,
-            "profileGIF": false
+            "profileGIF": false,
+            "hideStatus": false
         },
         "miscellaneous": {
             "nitroUpsell": false,
@@ -95,8 +103,9 @@
             "seasonalEvents": false,
             "blockedMessage": false,
             "ioChevrons": false,
-            "tagsBotApp": false
+            "tagsBotApp": false,
+            "userStatus": "show"
         }
     },
-    "settingVersion": "3.4.4"
+    "settingVersion": "3.5.0"
 }
