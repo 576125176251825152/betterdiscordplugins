@@ -1,6 +1,6 @@
 {
     "currentVersionInfo": {
-        "version": "6.7.7",
+        "version": "6.8.6",
         "hasShownChangelog": true
     },
     "settings": {
@@ -63,6 +63,7 @@
             "custom": false,
             "theme": "dark"
         },
+        "appIcon": "AppIcon",
         "videoCodec": -1
     }
 }

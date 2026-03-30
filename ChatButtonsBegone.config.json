@@ -104,8 +104,10 @@
             "blockedMessage": false,
             "ioChevrons": false,
             "tagsBotApp": false,
-            "userStatus": "show"
+            "userStatus": "show",
+            "baseGradient": false,
+            "badgeNewUser": false
         }
     },
-    "settingVersion": "3.5.0"
+    "settingVersion": "3.5.2"
 }

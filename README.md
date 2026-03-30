@@ -1,1 +1,1 @@
-"# betterdiscordplugins" 
+"# betterdiscordplugins"

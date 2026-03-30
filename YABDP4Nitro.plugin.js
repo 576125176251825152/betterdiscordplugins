@@ -2,7 +2,7 @@
  * @name YABDP4Nitro
  * @author Riolubruh
  * @authorLink https://github.com/riolubruh
- * @version 6.7.7
+ * @version 6.8.6
  * @invite HfFxUbgsBc
  * @source https://github.com/riolubruh/YABDP4Nitro
  * @donate https://github.com/riolubruh/YABDP4Nitro?tab=readme-ov-file#donate
@@ -51,7 +51,6 @@ const {
     EmojiStore,
     AppIconPersistedStoreState,
     ClipsStore,
-    UserProfileSettingsStore,
     ProfileEffectStore,
     GuildChannelStore
  } = Webpack.Stores;
@@ -98,7 +97,8 @@ const [
     CustomUserPanelState,
     UserContextMenuFunctions,
     UserAvatar,
-    StreamButtons
+    StreamButtons,
+    PremiumUpsellOverlay
 ] = Webpack.getBulk(
     {filter: Webpack.Filters.byPrototypeKeys('getBannerURL')},
     {filter: Webpack.Filters.byKeys("subscribe","dispatch"), searchExports:true}, 
@@ -138,8 +138,8 @@ const [
         getStickerSendability: x=>x.toString().includes('canUseCustomStickersEverywhere'),
         isSendableSticker: x=>x.toString().includes(')=>0===')
     }},
-    {filter: Webpack.Filters.bySource('useExperiment({location:"useEnableClips'), map: { //ClipsEnabledMod
-        useEnableClips: x=>x.toString().includes('useExperiment({location:"useEnableClips"'),
+    {filter: Webpack.Filters.bySource('getConfig({location:"useEnableClips'), map: { //ClipsEnabledMod
+        useEnableClips: x=>x.toString().includes('getConfig({location:"useEnableClips"'),
         areClipsEnabled: x=>x.toString().includes('areClipsEnabled'),
     }},
     {filter: Webpack.Filters.bySource('.premiumTier].limits.fileSize:'), map: { //MaxFileSizeMod
@@ -167,6 +167,9 @@ const [
         ApplicationStreamFPSButtonsWithSuffixLabel: o => Array.isArray(o) && typeof o[0]?.label === 'string' && o[0]?.value === 15,
         ApplicationStreamResolutionButtonsWithSuffixLabel: o => Array.isArray(o) && o[0]?.label === "480p",
         ApplicationStreamResolutions: o => o?.RESOLUTION_1440
+    }},
+    {filter: Webpack.Filters.bySource("PREMIUM_UPSELL_OVERLAY", "showOverlay", "PREMIUM_UPSELL_VIEWED"), map:{
+        render: x=>x
     }}
 );
 const {
@@ -247,7 +250,8 @@ const defaultSettings = {
     "customUserThemeSettings": {
         custom: false,
         theme: "dark"
-    }
+    },
+    "appIcon": "AppIcon"
 };
 const defaultData = {
     avatarDecorations: {},
@@ -272,16 +276,17 @@ const config = {
             "discord_id": "359063827091816448",
             "github_username": "riolubruh"
         }],
-        "version": "6.7.7",
+        "version": "6.8.6",
         "description": "Unlock all screensharing modes, use cross-server & GIF emotes, and more!",
         "github": "https://github.com/riolubruh/YABDP4Nitro",
         "github_raw": "https://raw.githubusercontent.com/riolubruh/YABDP4Nitro/main/YABDP4Nitro.plugin.js"
     },
     changelog: [
         {
-            title: "6.7.7",
+            title: "6.8.6",
             items: [
-                "Fixed Nameplate UI not working correctly."
+                "Fixed Fake Avatar Decorations no longer applying to profiles.",
+                "Fixed incorrect border radius on Change Fake Decoration button."
             ]
         }
     ],
@@ -397,7 +402,7 @@ const config = {
             collapsible: true,
             shown: false,
             settings: [
-                { type: "switch", id: "useClipBypass", name: "Use Clips Bypass", note: "Enabling this will effectively set your file upload limit for video files to 100MB. Disable this if you have a file upload limit larger than 100MB. Enabling this option will also enable Experiments.", value: () => settings.useClipBypass },
+                { type: "switch", id: "useClipBypass", name: "Use Clips Bypass", note: "Enabling this will effectively set your file upload limit for video files to 100MB. Disable this if you have a file upload limit larger than 100MB.", value: () => settings.useClipBypass },
                 { type: "dropdown", id: "clipTimestamp", name: "Timestamp", note: "This option lets you choose how the plugin determines the timestamp to put on the generated clip.", value: () => settings.clipTimestamp, options: [
                         { label: "Zero (January 1st, 2015)", value: 0 },
                         { label: "Current Date/Time", value: 1 },
@@ -555,6 +560,8 @@ module.exports = class YABDP4Nitro {
         Patcher.unpatchAll();
 
         Dispatcher.unsubscribe("COLLECTIBLES_CATEGORIES_FETCH_SUCCESS", this.storeProductsFromCategories);
+
+        Dispatcher.unsubscribe("APP_ICON_UPDATED", this.saveAppIcon);
 
         if(settings.changePremiumType2 > -1 && settings.changePremiumType2 <= 2){
             try {
@@ -871,14 +878,19 @@ module.exports = class YABDP4Nitro {
                 }
             });
         }
+
+        if(settings.fakeProfileBanners || settings.fakeProfileThemes || settings.customPFPs){
+            Patcher.before(PremiumUpsellOverlay, "render", (_,[args]) => {
+                args.showOverlay = false;
+            });
+        }
     } //End of saveAndUpdate()
     // #endregion
 
     async displayNameStyles(){
-        Patcher.after(UserStore,"getUser",(_,args,ret) => {
-            let revealedText = this.getRevealedText(args[0],`\uDB40\uDC53\uDB40\uDC7B`);
+        Patcher.after(UserStore,"getUser",(_,[userId],ret) => {
+            let revealedText = this.getRevealedText(userId,`\uDB40\uDC53\uDB40\uDC7B`);
             if(revealedText) {
-
                 let regex = /S\{[^}]*?\}/;
                 //Check if there are any matches in the revealed text.
                 let matches = revealedText.match(regex);
@@ -963,18 +975,18 @@ module.exports = class YABDP4Nitro {
     }
 
     async displayNameStylesSection(){
-        if(!this.DisplayNameSection) this.DisplayNameSection = await Webpack.waitForModule(Webpack.Filters.bySource('displayNameStylesSection', 'onGlobalNameChange'), {signal: controller.signal});
+        if(!this.DisplayNameSection) this.DisplayNameSection = await Webpack.waitForModule(Webpack.Filters.bySource('pendingGlobalName', 'onGlobalNameChange', 'currentGlobalName'), {signal: controller.signal});
         let renderFn2 = this.findMangledName(this.DisplayNameSection, x=>x, "DisplayNameSection");
 
         if(!this.DisplayNameStylesSection) this.DisplayNameStylesSection = await Webpack.waitForModule(Webpack.Filters.byStrings('userDisplayNameStyles', 'guildDisplayNameStyles'), {signal: controller.signal});
 
         if(this.DisplayNameSection && this.DisplayNameStylesSection){
             Patcher.after(this.DisplayNameSection, renderFn2, (_, [args], ret) => {
-                if(!ret?.props?.children?.[1]){
-                    ret.props.children[1] = React.createElement(this.DisplayNameStylesSection, {
+                if(ORIGINAL_NITRO_STATUS != 2){
+                    ret.props.children.splice(1,0,React.createElement(this.DisplayNameStylesSection, {
                         user: args.user,
                         className: "yabd-marginTop24"
-                    })
+                    }));
                 }
             });
         }
@@ -1312,12 +1324,41 @@ module.exports = class YABDP4Nitro {
         }
     }
 
+    //this functionality was previously in getRevealedText, but it's been separated to allow it to be checked on its own
+    getRevealedTextPerServer(userId, shouldInclude){
+        //per-server pronoun field check
+        const guildId = SelectedGuildStore.getGuildId();
+        if(guildId){
+            let userGuildProfile = UserProfileStore.getGuildMemberProfile(userId, guildId);
+            if(userGuildProfile?.pronouns){
+                if(userGuildProfile.pronouns.includes(shouldInclude)){
+                    let revealedText = this.secondsightifyRevealOnly(String(userGuildProfile.pronouns));
+                    if(revealedText != undefined && revealedText != ""){
+                        return revealedText;
+                    }
+                }
+            }
+            //per-server bio check
+            if(userGuildProfile?.bio){
+                if(userGuildProfile.bio.includes(shouldInclude)){
+                    let revealedText = this.secondsightifyRevealOnly(String(userGuildProfile.bio));
+                    if(revealedText != undefined && revealedText != ""){
+                        return revealedText;
+                    }
+                }
+            }
+        }
+    }
+
     //shouldInclude is a string containing the characters that the encoded text should contain
     //that means that in order to check for "P{" for example, you check for the characters \uDB40\uDC50\uDB40\uDC7B since we're checking the encoded text
     //but since the encoded text is over 2 bytes, you need to use the surrogate pairs ( you can calculate them here https://russellcottrell.com/greek/utilities/SurrogatePairCalculator.htm )
     //if shouldInclude is blank, always return the revealed text if there is revealed text
     getRevealedText(userId, shouldInclude=""){
         let revealedText = ""; //init variable
+
+        let perServer = this.getRevealedTextPerServer(userId, shouldInclude);
+        if(perServer != undefined && perServer != "") return perServer;
 
         //get the user's profile from the cached user profiles
         let userProfile = UserProfileStore.getUserProfile(userId);
@@ -1336,7 +1377,6 @@ module.exports = class YABDP4Nitro {
                 }
             }
         }
-
         
         let customStatusActivity;
         try{
@@ -1410,13 +1450,15 @@ module.exports = class YABDP4Nitro {
             //slice off the n{ and the ending }
             let nameplate = firstMatch.slice(2,-1);
             if(nameplate){
-                let [asset, palette] = nameplate.split(',');
-                if(asset != undefined && palette != undefined){
+                let [skuId, palette] = nameplate.split(',');
+                let asset = data.nameplatesV2[skuId]?.asset;
+                
+                if(skuId != undefined && palette != undefined){
                     if(ret.collectibles == undefined) ret.collectibles = {};
                     ret.collectibles.nameplate = {
-                        asset: `nameplates/${asset}`,
+                        asset,
                         palette,
-                        sku_id: 0
+                        skuId
                     }
                 }
             }
@@ -1441,21 +1483,24 @@ module.exports = class YABDP4Nitro {
                     });
                 } else{
                     const listOfNameplates = Object.values(data.nameplatesV2);
+                    const listOfNameplateSkuIds = Object.keys(data.nameplatesV2);
+
                     for(let i = 0; i < listOfNameplates.length; i++){
                         let nameplate = listOfNameplates[i];
+                        let skuId = listOfNameplateSkuIds[i];
                         if(nameplate) {
                             if(query != "" && !nameplate.name.toLowerCase().includes(query.toLowerCase())){
                                 continue;
                             }
                             nameplatesList.push(React.createElement('div',{
-                                children: React.createElement(NameplatePreview[NameplatePreviewName].type,{
+                                children: React.createElement(NameplatePreview[NameplatePreviewName].type, {
                                     user: CurrentUser,
                                     isHighlighted: true,
                                     nameplate: {
-                                        asset: `nameplates/${nameplate.asset}`,
+                                        asset: `nameplates/${nameplate.asset.slice(0,-1)}`,
                                         palette: nameplate.palette,
-                                        type: 2,
-                                        label: nameplate.label
+                                        skuId,
+                                        label: nameplate.label ? nameplate.label : ""
                                     },
                                     isPurchased: true
                                 }),
@@ -1472,7 +1517,7 @@ module.exports = class YABDP4Nitro {
                                 },
                                 onClick: () => {
                                     //make 3y3 string
-                                    let strToEncode = `n{${nameplate.asset},${nameplate.palette}}`;
+                                    let strToEncode = `n{${skuId},${nameplate.palette}}`;
                                     let encodedStr = secondsightifyEncodeOnly(strToEncode);
     
                                     copyToClipboard(" " + encodedStr,"3y3 copied to clipboard!")
@@ -1514,7 +1559,9 @@ module.exports = class YABDP4Nitro {
 
         const NameplatePreviewName = this.findMangledName(NameplatePreview, x=>x?.type?.toString?.().includes?.("showPlaceholderUser"));
 
-        Patcher.after(NameplateSectionMod, NameplateSection, (_, args, ret) => {
+        Patcher.after(NameplateSectionMod, NameplateSection, (_, [args], ret) => {
+            //disable for per-server profiles screen
+            if(args?.guild && ORIGINAL_NITRO_STATUS != 2) return;
             
             if(ret?.props?.children){
                 ret.props.children = [ret.props.children];
@@ -1757,10 +1804,9 @@ module.exports = class YABDP4Nitro {
 
         if(settings.enableClipsExperiment){
             this.experiments();
-            this.overrideExperiment("2023-09_clips_nitro_early_access", 2);
-            this.overrideExperiment("2022-11_clips_experiment", 1);
-            this.overrideExperiment("2023-10_viewer_clipping", 1);
+            this.overrideVariant("2026-03-clips-experiment", 2);
         }
+       
         //spoof nitro file size limit
         Patcher.instead(MaxFileSizeMod, "getMaxFileSize", (_,args) => {
             if(ORIGINAL_NITRO_STATUS === 2){
@@ -1779,7 +1825,6 @@ module.exports = class YABDP4Nitro {
         // currently they use useExperiment to check if they should appear, which is a function that I can't patch
         // and remaking the respective React elements sounds really difficult
 
-
         if(!this.MP4Box){
             try{
                 await loadMP4Box();
@@ -1791,9 +1836,9 @@ module.exports = class YABDP4Nitro {
         async function ffmpegTransmux(arrayBuffer, inFileName = "input.mp4", ffmpegArguments, outFileName = "output.mp4"){
             if(ffmpeg){
                 if(!ffmpegArguments)
-                    ffmpegArguments = ["-i",inFileName,"-codec","copy","-dn","-map_chapters","-1","-brand","isom/avc1","-movflags","+faststart",
-                                       "-map","0","-map_metadata","-1","-map_chapters","-1",outFileName];
-                
+                    ffmpegArguments = ["-i",inFileName,"-c:v","copy","-c:a","copy","-c:s","mov_text","-dn","-brand","isom/avc1",
+                        "-movflags","+faststart","-map","0","-map_metadata","-1","-map_chapters","-1","-map","-0:t","-strict","-2",outFileName
+                    ];
                 if(arrayBuffer && inFileName){
                     await ffmpeg.writeFile(inFileName, new Uint8Array(arrayBuffer));
                 }
@@ -1819,7 +1864,7 @@ module.exports = class YABDP4Nitro {
 
             let ffmpegArgs = ["-f","lavfi","-i","color=c=black:s=400x50","-i",inFileName,"-shortest","-fflags","+shortest", 
                 "-brand","isom/avc1","-movflags","+faststart","-map_metadata","-1","-dn","-map_chapters","-1",
-                "-preset","ultrafast","-c:a","copy","-strict","-2","-tune", "stillimage","-r","1", outFileName];
+                "-preset","ultrafast","-c:a","copy","-strict","-2","-tune","stillimage","-r","1", outFileName];
 
             return await ffmpegTransmux(arrayBuffer, inFileName, ffmpegArgs, outFileName);
         }
@@ -2169,8 +2214,6 @@ module.exports = class YABDP4Nitro {
         });
 
         Patcher.after(ClipsEnabledMod, "useEnableClips", () => {
-            //I have no earthly idea why but, instead patching this one causes React crashes.
-            // Luckily after-patching prevents it from crashing and it still unlocks it as it should
             return true;
         });
         Patcher.instead(ClipsEnabledMod, "areClipsEnabled", () => {
@@ -2297,10 +2340,10 @@ module.exports = class YABDP4Nitro {
                     console.log(message);
                 });
             }else{
-                Logger.info(FFmpegWASM);
-                Logger.info(ffmpegCoreURL);
-                Logger.info(ffmpegCoreWasmURL);
-                Logger.info(ffmpegWorkerURL);
+                Logger.info("FFmpegWASM", FFmpegWASM);
+                Logger.info("ffmpegCoreURL", ffmpegCoreURL);
+                Logger.info("ffmpegCoreWasmURL", ffmpegCoreWasmURL);
+                Logger.info("ffmpegWorkerURL",ffmpegWorkerURL);
                 throw new Error("One or more of the necessary components failed to load.");
             }
         } catch(err) {
@@ -2336,6 +2379,14 @@ module.exports = class YABDP4Nitro {
             experimentBucket: bucket
         });
     }
+
+    overrideVariant(experimentName, variantId){
+        Dispatcher.dispatch({
+            type: "APEX_EXPERIMENT_OVERRIDE_CREATE",
+            experimentName,
+            variantId
+        });
+    }
     // #endregion
 
     applySavedClientTheme(){
@@ -2348,9 +2399,9 @@ module.exports = class YABDP4Nitro {
                     appearance: {
                         shouldSync: false,  //prevent sync to stop discord api from butting in
                         settings: {
-                            theme: args.theme, //gradient themes are based off of either dark or light, args.theme stores this information
+                            theme: settings.customUserThemeSettings.theme, //dark or light theme
                             clientThemeSettings: {
-                                backgroundGradientPresetId: args.backgroundGradientPresetId //preset ID for the gradient theme
+                                backgroundGradientPresetId: settings.lastGradientSettingStore //preset ID for the gradient theme
                             },
                             developerMode: true
                         }
@@ -2411,7 +2462,7 @@ module.exports = class YABDP4Nitro {
             //Patching saveClientTheme function.
             Patcher.instead(themesModule, saveClientTheme, (_, [args]) => {
                 //Support for custom gradient themes
-                if(args?.customUserThemeSettings){
+                if(args.customUserThemeSettings != undefined){
                     //this dispatch is technically not necessary
                     Dispatcher.dispatch({
                         type: "SELECTIVELY_SYNCED_USER_SETTINGS_UPDATE",
@@ -2432,8 +2483,7 @@ module.exports = class YABDP4Nitro {
                     settings.customUserThemeSettings.theme = args.theme;
 
                     Data.save("settings", settings);
-                }
-                else if(args?.backgroundGradientPresetId){ //preset gradient themes
+                } else if(args.customUserThemeSettings == undefined && args?.backgroundGradientPresetId != undefined && args.theme != undefined){ //preset gradient themes
                     //Store the last gradient setting used in settings
                     settings.lastGradientSettingStore = args.backgroundGradientPresetId;
 
@@ -2441,6 +2491,9 @@ module.exports = class YABDP4Nitro {
                     settings.customUserThemeSettings.custom = false;
                     //remove custom theme
                     CustomUserThemeState.state.setState(CustomUserThemeState.state.getInitialState());
+
+                    //dark/light
+                    settings.customUserThemeSettings.theme = args.theme;
                     
                     //save any changes to settings
                     Data.save("settings", settings);
@@ -2467,8 +2520,8 @@ module.exports = class YABDP4Nitro {
                         type: "UPDATE_BACKGROUND_GRADIENT_PRESET",
                         presetId: settings.lastGradientSettingStore
                     });
-                } else if(!args.backgroundGradientPresetId && !args.customUserThemeSettings){ //if user is trying to set the theme to a default theme
-    
+                } else if(args.customUserThemeSettings == undefined && args.backgroundGradientPresetId == undefined && !args.customUserThemeSettings){ //if user is trying to set the theme to a default theme
+
                     //If this number is -1, that indicates to the plugin that the current theme we're setting to is not a gradient nitro theme.
                     settings.lastGradientSettingStore = -1;
 
@@ -2636,10 +2689,13 @@ module.exports = class YABDP4Nitro {
         let AvatarSectionFnName = this.findMangledName(this.customPFPSettingsRenderMod, x=>x, "AvatarSection");
         if(!AvatarSectionFnName) return;
 
+        Patcher.before(this.customPFPSettingsRenderMod, AvatarSectionFnName, (_, [args]) => {
+            args.disabled = false;
+        });
+
         Patcher.after(this.customPFPSettingsRenderMod, AvatarSectionFnName, (_, [args], ret) => {
             if(!args) return;
             if(!ret) return;
-            if(args.guildId) return; //disable appearing in per-server profiles
 
             //don't need to do anything if this is the "Try out Nitro" flow.
             if(args.isTryItOut) return;
@@ -2894,15 +2950,19 @@ module.exports = class YABDP4Nitro {
         }
         profileEffectsFiltered = Object.values(profileEffectsTemp);
 
-        Patcher.after(UserProfileStore, "getUserProfile", (_, [args], ret) => {
+        Patcher.after(UserProfileStore, "getUserProfile", (_, [userId], ret) => {
             //error prevention
             if(ret == undefined) return;
             if(ret.bio == undefined) return;
 
-            //if bio includes encoded fx 
-            if(ret.bio.includes(`\uDB40\uDC66\uDB40\uDC78`)){
-                //reveal 3y3 encoded text. this string will also include the rest of the bio
-                let revealedText = this.secondsightifyRevealOnly(ret.bio);
+            let perServer = this.getRevealedTextPerServer(userId, `\uDB40\uDC66\uDB40\uDC78`);
+
+            //if main or server bio includes encoded fx 
+            if(perServer || ret.bio.includes(`\uDB40\uDC66\uDB40\uDC78`)){
+                let revealedText;
+                if(!perServer) revealedText = this.secondsightifyRevealOnly(ret.bio); //reveal 3y3 encoded text. this string will also include the rest of the bio
+                else revealedText = perServer;
+                
                 if(revealedText == undefined) return;
 
                 //if profile effect 3y3 is detected
@@ -2932,9 +2992,9 @@ module.exports = class YABDP4Nitro {
                     };
 
                     //if for some reason we dont know what this user's ID is, stop here
-                    if(args == undefined) return;
+                    if(userId == undefined) return;
                     //otherwise add them to the list of users who show up with the YABDP4Nitro user badge
-                    if(!badgeUserIDs.includes(args)) badgeUserIDs.push(args);
+                    if(!badgeUserIDs.includes(userId)) badgeUserIDs.push(userId);
                 }
             }
         }); //end of getUserProfile patch.
@@ -2949,6 +3009,7 @@ module.exports = class YABDP4Nitro {
         Patcher.after(this.profileEffectSectionRenderer, ProfileEffectSectionFnName, (_, [args], ret) => {
             if(!args) return;
             if(args.isTryItOut) return;
+            if(args.guild && ORIGINAL_NITRO_STATUS != 2) return;
 
             function ProfileEffects({query}){
 
@@ -3076,22 +3137,20 @@ module.exports = class YABDP4Nitro {
                 category.products.forEach(product => {
                     product.items.forEach(item => {
                         if(item.asset){
-                            //store nameplates
-                            if(item.asset.startsWith('nameplates')){
+                            if(item.type === 2){ //store nameplates
                                 data.nameplatesV2[item.skuId] = {
                                     asset: item.asset.replace('nameplates/', ''),
                                     palette: item.palette,
                                     name: product.name
                                 };
-                                return;
-                            } else if(item.asset.startsWith("a_")){ //store avatar decorations assets
-                                data.avatarDecorations[item.id] = item.asset;
-                                return;
+                            } else if(item.type === 0){ //store avatar decorations assets
+                                data.avatarDecorations[item.skuId] = item.asset;
                             }
                         }
                     });
                 });
             });
+            this.saveDataFile();
         }
     };
 
@@ -3146,7 +3205,7 @@ module.exports = class YABDP4Nitro {
                 //set avatar decoration data to fake avatar decoration
                 ret.avatarDecorationData = {
                     asset: avatarDecorations[assetId],
-                    sku_id: "0" //dummy sku id
+                    skuId: assetId
                 };
 
                 //add user to the list of users to show with the YABDP4Nitro user badge if we haven't already.
@@ -3155,7 +3214,7 @@ module.exports = class YABDP4Nitro {
         }); //end of getUser patch for avatar decorations
 
         //Wait for avatar decor customization section render module to be loaded and store
-        if(!this.decorationCustomizationSectionMod) this.decorationCustomizationSectionMod = await Webpack.waitForModule(Webpack.Filters.byStrings("enable_avatar_decoration_uploads"), {defaultExport:false, signal: controller.signal});
+        if(!this.decorationCustomizationSectionMod) this.decorationCustomizationSectionMod = await Webpack.waitForModule(Webpack.Filters.byStrings('pendingAvatarDecoration', 'forcedDivider'), {defaultExport:false, signal: controller.signal});
 
         let fnName = this.findMangledName(this.decorationCustomizationSectionMod, x=>x, "DecorationCustomizationSection");
         if(!fnName) return;
@@ -3167,9 +3226,12 @@ module.exports = class YABDP4Nitro {
             //don't run if this is the try out nitro flow.
             if(args.isTryItOut) return;
 
+            //disable for the per-server profiles screen
+            if(args.guild && ORIGINAL_NITRO_STATUS != 2) return;
+
             //push change decoration button
-            if(ret?.props?.children){
-                ret.props.children.push(
+            if(ret?.props?.children?.props?.children){
+                ret.props.children.props.children.push(
                     React.createElement("button", {
                         id: "decorationButton",
                         children: "Change Decoration [YABDP4Nitro]",
@@ -3177,8 +3239,7 @@ module.exports = class YABDP4Nitro {
                             width: "100px",
                             height: "50px",
                             color: "white",
-                            borderRadius: "3px",
-                            marginTop: "8px",
+                            marginLeft: "5px",
                         },
                         className: "yabd-generic-button",
                         onClick: () => {
@@ -3186,6 +3247,8 @@ module.exports = class YABDP4Nitro {
                         }
                     })
                 );
+            }else{
+                Logger.error("Decoration Section ain't right chief.")
             }
 
             const secondsightifyEncodeOnly = this.secondsightifyEncodeOnly;
@@ -3979,20 +4042,40 @@ module.exports = class YABDP4Nitro {
 
     //#region 3y3 Profile Colors
     decodeAndApplyProfileColors(){
-        Patcher.after(UserProfileStore, "getUserProfile", (_, args, ret) => {
+        Patcher.after(UserProfileStore, "getUserProfile", (_, [userId], ret) => {
             if(ret == undefined) return;
             if(ret.bio == null) return;
-            const colorString = ret.bio.match(
-                /\u{e005b}\u{e0023}([\u{e0061}-\u{e0066}\u{e0041}-\u{e0046}\u{e0030}-\u{e0039}]+?)\u{e002c}\u{e0023}([\u{e0061}-\u{e0066}\u{e0041}-\u{e0046}\u{e0030}-\u{e0039}]+?)\u{e005d}/u,
-            );
-            if(colorString == null) return;
-            let parsed = [...colorString[0]].map((c) => String.fromCodePoint(c.codePointAt(0) - 0xe0000)).join("");
-            let colors = parsed
+
+            function decodeProfileColors(string){
+                const colorString = string.match(
+                    /\u{e005b}\u{e0023}([\u{e0061}-\u{e0066}\u{e0041}-\u{e0046}\u{e0030}-\u{e0039}]+?)\u{e002c}\u{e0023}([\u{e0061}-\u{e0066}\u{e0041}-\u{e0046}\u{e0030}-\u{e0039}]+?)\u{e005d}/u,
+                );
+                if(colorString == null) return false;
+                let parsed = [...colorString[0]].map((c) => String.fromCodePoint(c.codePointAt(0) - 0xe0000)).join("");
+                let colors = parsed
                 .substring(1, parsed.length - 1)
                 .split(",")
                 .map(x => parseInt(x.replace("#", "0x"), 16));
-            ret.themeColors = colors;
-            ret.premiumType = 2;
+                ret.themeColors = colors;
+                ret.premiumType = 2;
+                return true;
+            }
+
+            //per-server pronoun field check
+            const guildId = SelectedGuildStore.getGuildId();
+            if(guildId){
+                let userGuildProfile = UserProfileStore.getGuildMemberProfile(userId, guildId);
+                if(userGuildProfile?.pronouns){
+                    let success = decodeProfileColors(userGuildProfile.pronouns);
+                    if(success) return;
+                }
+                if(userGuildProfile?.bio){
+                    let success = decodeProfileColors(userGuildProfile.bio);
+                    if(success) return;
+                }
+            }
+
+            decodeProfileColors(ret.bio);
         });
     }
 
@@ -4006,7 +4089,8 @@ module.exports = class YABDP4Nitro {
         if(!profileThemesSectionFnName) return;
 
         Patcher.after(this.colorPickerRendererMod, profileThemesSectionFnName, (_, [args], ret) => {
-            if(args?.guildId) return; //disable appearing in per-server profiles
+            //enable in per-server profile section
+            ret.props.disabled = false;
 
             ret.props.children.props.children.push( //append copy colors 3y3 button
                 React.createElement("button", {
@@ -4019,17 +4103,22 @@ module.exports = class YABDP4Nitro {
                         marginTop: "10px"
                     },
                     onClick: () => {
-                        let themeColors;
-                        themeColors = UserProfileSettingsStore.getPendingChanges().pendingThemeColors;
-                        if(!themeColors)
-                            themeColors = UserProfileSettingsStore.getTryItOutChanges().tryItOutThemeColors;
-                        if(!themeColors){
-                            UI.showToast("Nothing has been copied. Is the selected color identical to your current color?", { type: "warning" });
+                        let primary = args?.pendingColors?.[0];
+                        let accent = args?.pendingColors?.[1];
+
+                        if(isNaN(primary) || isNaN(accent)){
+                            primary = ret?.props?.children?.props?.children?.[0]?.props?.children?.props?.color;
+                            accent = ret?.props?.children?.props?.children?.[1]?.props?.children?.props?.color;
+                        }
+
+                        if(isNaN(primary) || isNaN(accent)){
+                            Logger.error("Primary:",primary,"Accent:",accent);
+                            UI.showToast("Nothing has been copied!", { type: "error" });
                             return;
                         }
-                        const primary = themeColors[0];
-                        const accent = themeColors[1];
+ 
                         let message = `[#${primary.toString(16).padStart(6, "0")},#${accent.toString(16).padStart(6, "0")}]`;
+
                         const padding = "";
                         let encoded = Array.from(message)
                             .map(x => x.codePointAt(0))
@@ -4078,10 +4167,8 @@ module.exports = class YABDP4Nitro {
 
         //Patch getBannerURL function
         Patcher.instead(getBannerURLMod.prototype, "getBannerURL", (user, [args], ogFunction) => {
+            let profile = user?._userProfile;
 
-            let profile = user._userProfile;
-
-            //Returning ogFunction with the same arguments that were passed to this function will do the vanilla check for a legit banner.
             if(profile == undefined) return ogFunction(args);
 
             if(settings.userBgIntegration){ //if userBg integration is enabled
@@ -4096,46 +4183,39 @@ module.exports = class YABDP4Nitro {
                 }
             }
 
-            //do original function if we don't have the user's bio
-            if(profile.bio == undefined) return ogFunction(args);
-            //              includes /B encoded?
-            if(profile.bio.includes(`\uDB40\uDC42\uDB40\uDC7B`)){
-                //reveal 3y3 encoded text, store as parsed
-                let parsed = this.secondsightifyRevealOnly(profile.bio);
-                //if there is no 3y3 encoded text, return original function
-                if(parsed == undefined) return ogFunction(args);
+            //reveal 3y3 encoded text, store as parsed
+            let parsed = this.getRevealedText(user.userId,`\uDB40\uDC42\uDB40\uDC7B`);
+            //if there is no 3y3 encoded text, return original function
+            if(parsed == undefined) return ogFunction(args);
 
-                //This regex matches B{*} . Do not touch unless you know what you are doing.
-                let regex = /B\{[^}]*?\}/;
+            //This regex matches B{*} . Do not touch unless you know what you are doing.
+            let regex = /B\{[^}]*?\}/;
 
-                //find banner url in parsed bio
-                let matches = parsed.toString().match(regex);
+            //find banner url in parsed
+            let matches = parsed.toString().match(regex);
 
-                //if there's no matches, return original function
-                if(matches == undefined) return ogFunction(args);
-                if(matches == "") return ogFunction(args);
+            //if there's no matches, return original function
+            if(matches == undefined) return ogFunction(args);
 
-                //if there is matched text, grab the first match, replace the starting "B{" and ending "}" to get the clean filename
-                let matchedText = matches[0].replace("B{", "").replace("}", "");
+            //if there is matched text, grab the first match, replace the starting "B{" and ending "}" to get the clean filename
+            let matchedText = matches[0].replace("B{","").replace("}","");
 
-                //Checking for file extension. 
-                if(!String(matchedText).endsWith(".gif") && !String(matchedText).endsWith(".png") && !String(matchedText).endsWith(".jpg") && !String(matchedText).endsWith(".jpeg") && !String(matchedText).endsWith(".webp")){
-                    matchedText += ".gif"; //Fallback to a default file extension if one is not found.
+            //Checking for file extension. 
+            if(!String(matchedText).endsWith(".gif") && !String(matchedText).endsWith(".png") && !String(matchedText).endsWith(".jpg") && !String(matchedText).endsWith(".jpeg") && !String(matchedText).endsWith(".webp")) {
+                matchedText += ".gif"; //Fallback to a default file extension if one is not found.
+            }
 
-                }
+            //set banner id to fake value
+            profile.banner = "funky_kong_is_epic";
 
-                //set banner id to fake value
-                profile.banner = "funky_kong_is_epic";
+            //set this profile to appear with premium rendering
+            profile.premiumType = 2;
 
-                //set this profile to appear with premium rendering
-                profile.premiumType = 2;
+            //add this user to the list of users that show with the YABDP4Nitro user badge if we haven't aleady.
+            if(!badgeUserIDs.includes(user.userId)) badgeUserIDs.push(user.userId);
 
-                //add this user to the list of users that show with the YABDP4Nitro user badge if we haven't aleady.
-                if(!badgeUserIDs.includes(user.userId)) badgeUserIDs.push(user.userId);
-
-                //return final banner URL.
-                return `https://i.imgur.com/${matchedText}`;
-            }else return ogFunction(args);
+            //return final banner URL.
+            return `https://i.imgur.com/${matchedText}`;
         }); //End of patch for getBannerURL
     } //End of bannerUrlDecoding()
     //#endregion
@@ -4155,8 +4235,11 @@ module.exports = class YABDP4Nitro {
             UI.showToast("No URL was provided. Please enter an Imgur URL.", {type: "warning"});
         }
 
+        Patcher.before(this.profileBannerSectionRenderer, BannerSectionFnName, (_, [args]) =>  {
+            args.disabled = false;
+        });
+
         Patcher.after(this.profileBannerSectionRenderer, BannerSectionFnName, (_, [args], ret) => {
-            if(args?.guildId) return; //disable appearing in per-server profiles
             
             //create and append profileBannerUrlInput input element.
             let profileBannerUrlInput = React.createElement("input", {
@@ -4283,11 +4366,25 @@ module.exports = class YABDP4Nitro {
     } //End of bannerUrlEncoding()
     //#endregion
 
+    //save app icon on change
+    saveAppIcon({type, id}){
+        settings.appIcon = id;
+        Data.save("settings", settings);
+    }
+
     //#region App Icons
     appIcons(){
 
         let renderFn = this.findMangledName(AppIcon, x=>x, "AppIcon");
         if(!renderFn) return;
+
+        //restore app icon on start
+        Dispatcher.dispatch({
+            type: "APP_ICON_UPDATED",
+            id: settings.appIcon
+        });
+
+        Dispatcher.subscribe("APP_ICON_UPDATED", this.saveAppIcon);
 
         Patcher.instead(AppIcon, renderFn, () => {
             const currentDesktopIcon = AppIconPersistedStoreState.getCurrentDesktopIcon();
@@ -4301,7 +4398,7 @@ module.exports = class YABDP4Nitro {
             }else{
                 return React.createElement(CustomAppIcon, {
                     id: currentDesktopIcon,
-                    width: 48
+                    size: 40
                 });
             } 
         });
@@ -4502,8 +4599,9 @@ module.exports = class YABDP4Nitro {
                 -moz-user-select: none;
                 user-select: none;
                 cursor: pointer;
+                color: var(--control-primary-text-default);
                 background-color: var(--control-primary-background-default);
-                transition: background-color var(--custom-button-transition-duration) ease,color var(--custom-button-transition-duration) ease;
+                transition: background-color var(--custom-button-transition-duration) ease;
             }
 
             .yabd-generic-button:hover {
@@ -4577,6 +4675,7 @@ module.exports = class YABDP4Nitro {
         CurrentUser.premiumType = ORIGINAL_NITRO_STATUS;
         Patcher.unpatchAll();
         Dispatcher.unsubscribe("COLLECTIBLES_CATEGORIES_FETCH_SUCCESS", this.storeProductsFromCategories);
+        Dispatcher.unsubscribe("APP_ICON_UPDATED", this.saveAppIcon);
         DOM.removeStyle("YABDP4NitroBadges");
         DOM.removeStyle("YABDP4NitroGeneral");
         ContextMenu.unpatch('expression-picker', this.expressionPickerFunction);

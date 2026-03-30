@@ -2,7 +2,7 @@
  * @name BDFDB
  * @author DevilBro
  * @authorId 278543574059057154
- * @version 4.4.6
+ * @version 4.4.8
  * @description Required Library for DevilBro's Plugins
  * @invite Jx3TjNS
  * @donate https://www.paypal.me/MircoWittrien
@@ -1305,50 +1305,50 @@ module.exports = (_ => {
 						Promise.all(BDFDB.ArrayUtils.removeCopies(imports).map(i => req.e(i))).then(_ => Promise.all(BDFDB.ArrayUtils.removeCopies(menuIndexes).map(i => req(i)))).then(callback);
 					});
 				};
-				
+
+				let _moduleIndex = null, _moduleIndexCount = 0;
+
 				BDFDB.ModuleUtils.find = function (filter, config = {}) {
 					let defaultExport = typeof config.defaultExport != "boolean" ? true : config.defaultExport;
 					let onlySearchUnloaded = typeof config.onlySearchUnloaded != "boolean" ? false : config.onlySearchUnloaded;
 					let all = typeof config.all != "boolean" ? false : config.all;
 					const req = Internal.getWebModuleReq();
 					const found = [];
-					const isSearchable = (m, checkObject) => {
-						return m && (checkObject && typeof m == "object" || typeof m == "function") && !m.constructor.toLocaleString().startsWith("function DOMTokenList()") && typeof m.toLocaleString == "function" && m.toLocaleString().indexOf("IntlMessagesProxy") == -1;
-					};
-					if (!onlySearchUnloaded) for (let i in req.c) if (req.c.hasOwnProperty(i) && req.c[i].exports != window) {
-						let m = req.c[i].exports, r = null;
-						if (isSearchable(m, true)) {
-							if (!!(r = filter(m))) {
-								if (all) found.push(defaultExport ? r : req.c[i]);
-								else return defaultExport ? r : req.c[i];
-							}
-							else if (Object.keys(m).length < 400) for (let key of Object.keys(m)) try {
-								if (m[key] && isSearchable(m[key], true) && !!(r = filter(m[key]))) {
-									if (all) found.push(defaultExport ? r : req.c[i]);
-									else return defaultExport ? r : req.c[i];
+					const isSearchable = (m, checkObject) => m && (checkObject && typeof m == "object" || typeof m == "function") && !(m instanceof DOMTokenList) && m[Symbol.toStringTag] !== "IntlMessagesProxy";
+					if (!onlySearchUnloaded) {
+						if (!_moduleIndex) {
+							_moduleIndex = []; _moduleIndexCount = 0;
+							for (let i in req.c) {
+								_moduleIndexCount++;
+								if (req.c[i].exports == window) continue;
+								let m = req.c[i].exports;
+								if (!isSearchable(m, true)) continue;
+								let subs = null, keys = Object.keys(m);
+								if (keys.length < 400) {
+									subs = [];
+									for (let ki = 0; ki < keys.length; ki++) try { let sub = m[keys[ki]]; if (sub && isSearchable(sub, true)) subs.push(sub); } catch (e) {}
+									if (!subs.length) subs = null;
 								}
-							} catch (err) {}
-						}
-						if (config.moduleName && isSearchable(m, true) && isSearchable(m[config.moduleName], true)) {
-							if (!!(r = filter(m[config.moduleName]))) {
-								if (all) found.push(defaultExport ? r : req.c[i]);
-								else return defaultExport ? r : req.c[i];
-							}
-							else if (m[config.moduleName].type && isSearchable(m[config.moduleName].type, true) && !!(r = filter(m[config.moduleName].type))) {
-								if (all) found.push(defaultExport ? r : req.c[i]);
-								else return defaultExport ? r : req.c[i];
+								let def = m.__esModule && isSearchable(m.default, true) ? m.default : null;
+								_moduleIndex.push({m, mod: req.c[i], subs, def, defType: def && isSearchable(m.default.type, true) ? m.default.type : null});
 							}
 						}
-						if (m && m.__esModule && isSearchable(m.default, true)) {
-							if (!!(r = filter(m.default))) {
-								if (all) found.push(defaultExport ? r : req.c[i]);
-								else return defaultExport ? r : req.c[i];
+						const _stale = () => { let c = 0; for (let i in req.c) c++; if (c !== _moduleIndexCount) { _moduleIndex = null; return true; } return false; };
+						if (all && _stale()) return BDFDB.ModuleUtils.find(filter, config);
+						for (let j = 0; j < _moduleIndex.length; j++) {
+							let e = _moduleIndex[j], r = null;
+							if (!!(r = filter(e.m))) { if (all) found.push(defaultExport ? r : e.mod); else return defaultExport ? r : e.mod; }
+							if (e.subs) for (let k = 0; k < e.subs.length; k++) if (!!(r = filter(e.subs[k]))) { if (all) found.push(defaultExport ? r : e.mod); else return defaultExport ? r : e.mod; }
+							if (config.moduleName && isSearchable(e.m[config.moduleName], true)) {
+								if (!!(r = filter(e.m[config.moduleName]))) { if (all) found.push(defaultExport ? r : e.mod); else return defaultExport ? r : e.mod; }
+								else if (e.m[config.moduleName].type && isSearchable(e.m[config.moduleName].type, true) && !!(r = filter(e.m[config.moduleName].type))) { if (all) found.push(defaultExport ? r : e.mod); else return defaultExport ? r : e.mod; }
 							}
-							else if (isSearchable(m.default.type, true) && !!(r = filter(m.default.type))) {
-								if (all) found.push(defaultExport ? r : req.c[i]);
-								else return defaultExport ? r : req.c[i];
+							if (e.def) {
+								if (!!(r = filter(e.def))) { if (all) found.push(defaultExport ? r : e.mod); else return defaultExport ? r : e.mod; }
+								else if (e.defType && !!(r = filter(e.defType))) { if (all) found.push(defaultExport ? r : e.mod); else return defaultExport ? r : e.mod; }
 							}
 						}
+						if (!all && _stale()) return BDFDB.ModuleUtils.find(filter, config);
 					}
 					for (let i in req.m) if (req.m.hasOwnProperty(i)) {
 						let m = req.m[i];
@@ -2017,7 +2017,7 @@ module.exports = (_ => {
 				BDFDB.TooltipUtils = {};
 				BDFDB.TooltipUtils.create = function (anker, text, config = {}) {
 					if (!text && !config.guild) return null;
-					const itemLayerContainer = document.querySelector(`${BDFDB.dotCN.app} ~ ${BDFDB.dotCN.itemlayercontainer}:has(${BDFDB.dotCN.itemlayercontainerclicktrap})`) || document.querySelector(`${BDFDB.dotCN.app} ~ ${BDFDB.dotCN.itemlayercontainer}`) || document.querySelector(BDFDB.dotCN.itemlayercontainer);
+					const itemLayerContainer = document.querySelector(`${BDFDB.dotCN.app} ~ ${BDFDB.dotCN.itemlayercontainer}:has(${BDFDB.notCN.pictureinpicture})`) || document.querySelector(`${BDFDB.dotCN.app} ~ ${BDFDB.dotCN.itemlayercontainer}:empty`) || document.querySelector(`${BDFDB.dotCN.app} ~ ${BDFDB.dotCN.itemlayercontainer}`) || document.querySelector(BDFDB.dotCN.itemlayercontainer);
 					if (!itemLayerContainer || !Node.prototype.isPrototypeOf(anker) || !document.contains(anker)) return null;
 					const id = BDFDB.NumberUtils.generateId(Tooltips);
 					const wrapper = BDFDB.DOMUtils.create(`<div class="${BDFDB.disCN.itemlayercontainerclicktrap}"><div class="${BDFDB.disCNS.itemlayer + BDFDB.disCN.itemlayerdisabledpointerevents}"><div class="${BDFDB.disCN.tooltip}" tooltip-id="${id}"><div class="${BDFDB.disCN.tooltipcontent}"></div><div class="${BDFDB.disCNS.tooltippointer + BDFDB.disCN.tooltippointerbg}"></div><div class="${BDFDB.disCN.tooltippointer}"></div></div></div></div>`);
@@ -2252,37 +2252,103 @@ module.exports = (_ => {
 					if (!plugin || !plugin.modulePatches) return;
 					let patchPriority = !isNaN(plugin.patchPriority) ? plugin.patchPriority : 5;
 					patchPriority = patchPriority < 1 ? (plugin == Internal ? 0 : 1) : (patchPriority > 9 ? (plugin == Internal ? 10 : 9) : Math.round(patchPriority));
+					let searchEntries = [], lazyEntries = [];
 					for (let patchType in plugin.modulePatches) {
 						if (!PluginStores.modulePatches[patchType]) PluginStores.modulePatches[patchType] = {};
 						for (let type of plugin.modulePatches[patchType]) {
-							if (InternalData.PatchModules[type]) {
-								let found = false;
-								if (!InternalData.PatchModules[type].noSearch && (patchType == "before" || patchType == "after")) {
-									let exports = (BDFDB.ModuleUtils.find(m => Internal.isCorrectModule(m, type) && m, {defaultExport: false, moduleName: type}) || {}).exports;
-									if (exports && !exports.default) for (let key of Object.keys(exports)) if (typeof exports[key] == "function" && !(exports[key].prototype && exports[key].prototype.render) && Internal.isCorrectModule(exports[key], type, false) && exports[key].toString().length < 50000) {
-										found = true;
-										BDFDB.PatchUtils.patch(plugin, exports, key, {[patchType]: e => Internal.initiatePatch(plugin, type, {
-											arguments: e.methodArguments,
-											instance: e.instance,
-											returnvalue: e.returnValue,
-											component: exports[key],
-											name: type,
-											methodname: "render",
-											patchtypes: [patchType]
-										})}, {name: type});
-										break;
-									}
-								}
-								if (!found) {
-									if (!PluginStores.modulePatches[patchType][type]) PluginStores.modulePatches[patchType][type] = [];
-									if (!PluginStores.modulePatches[patchType][type][patchPriority]) PluginStores.modulePatches[patchType][type][patchPriority] = [];
-									PluginStores.modulePatches[patchType][type][patchPriority].push(plugin);
-									if (PluginStores.modulePatches[patchType][type][patchPriority].length > 1) PluginStores.modulePatches[patchType][type][patchPriority] = BDFDB.ArrayUtils.keySort(PluginStores.modulePatches[patchType][type][patchPriority], "name");
-								}
-							}
-							else BDFDB.LogUtils.warn(`[${type}] not found in PatchModules InternalData`, plugin);
+							if (!InternalData.PatchModules[type]) { BDFDB.LogUtils.warn(`[${type}] not found in PatchModules InternalData`, plugin); continue; }
+							if (!InternalData.PatchModules[type].noSearch && (patchType == "before" || patchType == "after")) searchEntries.push({patchType, type});
+							else lazyEntries.push({patchType, type});
 						}
 					}
+					let foundExports = {};
+					let remaining = new Set(searchEntries.map(e => e.type));
+					if (remaining.size) {
+						const req = Internal.getWebModuleReq();
+						const isSearchable = (m, checkObject) => m && (checkObject && typeof m == "object" || typeof m == "function") && !(m instanceof DOMTokenList) && m[Symbol.toStringTag] !== "IntlMessagesProxy";
+						let moduleCache = BDFDB.DataUtils.load(BDFDB, "ModuleIdCache") || {};
+						let cacheChanged = false;
+						for (let k in moduleCache) if (moduleCache[k] === false || !InternalData.PatchModules[k]) { delete moduleCache[k]; cacheChanged = true; }
+						let sessionNF = Internal._sessionNF || (Internal._sessionNF = new Set());
+						for (let type of [...remaining]) {
+							if (sessionNF.has(type)) { remaining.delete(type); continue; }
+							let cached = moduleCache[type];
+							if (cached != null && cached !== false) {
+								let modId = cached;
+								let valid = false;
+								if (req.c[modId] && req.c[modId].exports != window) {
+									let m = req.c[modId].exports;
+									if (isSearchable(m, true)) {
+										for (let key of Object.keys(m)) {
+											try { if (m[key] && isSearchable(m[key], true) && Internal.isCorrectModule(m[key], type)) { valid = true; break; } } catch(e) {}
+										}
+										if (!valid && typeof m == "function" && Internal.isCorrectModule(m, type)) valid = true;
+										if (!valid && req.m[modId] && isSearchable(req.m[modId]) && Internal.isCorrectModule(req.m[modId], type)) valid = true;
+										if (valid) { foundExports[type] = m; remaining.delete(type); }
+									}
+								}
+								if (!valid) { delete moduleCache[type]; cacheChanged = true; }
+							}
+						}
+						if (remaining.size) {
+							for (let i in req.c) {
+								if (!req.c.hasOwnProperty(i) || req.c[i].exports == window) continue;
+								let m = req.c[i].exports;
+								if (!isSearchable(m, true)) continue;
+								let mKeys = Object.keys(m);
+								let searchableKeys = mKeys.length < 400 ? mKeys.filter(key => { try { return m[key] && isSearchable(m[key], true); } catch(e) { return false; } }) : null;
+								for (let type of remaining) {
+									if (typeof m == "function" && Internal.isCorrectModule(m, type)) { foundExports[type] = m; moduleCache[type] = i; cacheChanged = true; remaining.delete(type); continue; }
+									if (m[type] && isSearchable(m[type], true) && Internal.isCorrectModule(m[type], type)) { foundExports[type] = m; moduleCache[type] = i; cacheChanged = true; remaining.delete(type); }
+									else if (m.__esModule && m.default && isSearchable(m.default, true) && Internal.isCorrectModule(m.default, type)) { foundExports[type] = m; moduleCache[type] = i; cacheChanged = true; remaining.delete(type); }
+								}
+								if (remaining.size && searchableKeys) for (let ki = 0; ki < searchableKeys.length && remaining.size; ki++) {
+									let fn = m[searchableKeys[ki]];
+									for (let type of remaining) {
+										if (Internal.isCorrectModule(fn, type)) { foundExports[type] = m; moduleCache[type] = i; cacheChanged = true; remaining.delete(type); }
+									}
+								}
+								if (!remaining.size) break;
+							}
+							if (remaining.size) for (let i in req.m) if (req.m.hasOwnProperty(i)) {
+								let m = req.m[i];
+								if (m && isSearchable(m) && req.c[i] && isSearchable(req.c[i].exports, true)) {
+									for (let type of remaining) if (Internal.isCorrectModule(m, type)) { foundExports[type] = req.c[i].exports; moduleCache[type] = i; cacheChanged = true; remaining.delete(type); }
+								}
+								if (!remaining.size) break;
+							}
+						}
+						if (remaining.size) for (let type of remaining) sessionNF.add(type);
+						if (cacheChanged) BDFDB.DataUtils.save(moduleCache, BDFDB, "ModuleIdCache");
+					}
+					const registerPatch = (patchType, type) => {
+						let store = PluginStores.modulePatches[patchType];
+						if (!store[type]) store[type] = [];
+						if (!store[type][patchPriority]) store[type][patchPriority] = [];
+						store[type][patchPriority].push(plugin);
+						if (store[type][patchPriority].length > 1) store[type][patchPriority] = BDFDB.ArrayUtils.keySort(store[type][patchPriority], "name");
+					};
+					for (let {patchType, type} of searchEntries) {
+						let found = false, exports = foundExports[type];
+						if (exports && !exports.default) for (let key of Object.keys(exports)) {
+							let fn = exports[key];
+							if (typeof fn == "function" && !(fn.prototype && fn.prototype.render) && Internal.isCorrectModule(fn, type, false) && fn.toString().length < 50000) {
+								found = true;
+								BDFDB.PatchUtils.patch(plugin, exports, key, {[patchType]: e => Internal.initiatePatch(plugin, type, {
+									arguments: e.methodArguments,
+									instance: e.instance,
+									returnvalue: e.returnValue,
+									component: exports[key],
+									name: type,
+									methodname: "render",
+									patchtypes: [patchType]
+								})}, {name: type});
+								break;
+							}
+						}
+						if (!found) registerPatch(patchType, type);
+					}
+					for (let {patchType, type} of lazyEntries) registerPatch(patchType, type);
 				};
 				Internal.addContextPatches = function (plugin) {
 					if (!InternalData.ContextMenuTypes || !BdApi || !BdApi.ContextMenu || typeof BdApi.ContextMenu.patch != "function") return;
@@ -3026,7 +3092,11 @@ module.exports = (_ => {
 					}
 				};
 				MyReact.forceUpdate = function (...instances) {
-					for (let ins of instances.flat(10).filter(n => n)) if (ins.updater) ins.forceUpdate();
+					for (let ins of instances.flat(10).filter(n => n)) if (ins.updater) {
+						let fiber = ins._reactInternals || ins._reactInternalFiber;
+						if (fiber) fiber.memoizedProps = fiber.pendingProps = ins.props;
+						ins.forceUpdate();
+					}
 				};
 				MyReact.getInstance = function (node) {
 					if (!BDFDB.ObjectUtils.is(node)) return null;
@@ -3851,7 +3921,7 @@ module.exports = (_ => {
 							let hidden = BDFDB.DOMUtils.isHidden(hideNode);
 							if (hidden) {
 								BDFDB.DOMUtils.toggle(hideNode, true);
-								hideNode.BDFDBgetRectsHidden = true;
+								if (!BDFDB.DOMUtils.isHidden(hideNode)) hideNode.BDFDBgetRectsHidden = true;
 							}
 							hideNode = hideNode.parentElement;
 						}
@@ -4495,12 +4565,22 @@ module.exports = (_ => {
 					}, instant ? 0 : 1000);
 				};
 				
+				let classCache = BDFDB.DataUtils.load(BDFDB, "ClassModuleCache") || {}, classSave = null;
 				const DiscordClassModules = Object.assign({}, InternalData.CustomClassModules);
 				Internal.DiscordClassModules = new Proxy(DiscordClassModules, {
 					get: function (_, item) {
 						if (DiscordClassModules[item]) return DiscordClassModules[item];
 						if (!InternalData.DiscordClassModules[item]) return;
+						if (item in classCache) {
+							if (classCache[item] === false) return;
+							let m = Internal.getWebModuleReq().c[classCache[item]]?.exports;
+							if (m && m != window && [InternalData.DiscordClassModules[item].props].flat(10).every(p => typeof m[p] == "string")) return DiscordClassModules[item] = m;
+							delete classCache[item];
+						}
 						DiscordClassModules[item] = BDFDB.ModuleUtils.findStringObject(InternalData.DiscordClassModules[item].props, Object.assign({}, InternalData.DiscordClassModules[item]));
+						if (DiscordClassModules[item]) { let req = Internal.getWebModuleReq(); for (let i in req.c) if (req.c[i].exports === DiscordClassModules[item]) { classCache[item] = i; break; } }
+						else classCache[item] = false;
+						if (!classSave) classSave = setTimeout(() => { classSave = null; BDFDB.DataUtils.save(classCache, BDFDB, "ClassModuleCache"); }, 100);
 						return DiscordClassModules[item] ? DiscordClassModules[item] : undefined;
 					}
 				});
